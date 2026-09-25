@@ -229,15 +229,22 @@ export function ResellerDashboard() {
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[400px] bg-gradient-to-tr from-emerald-600/10 to-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
       {/* Header */}
-      <div className="mb-8 relative z-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-          <span className="text-xs font-bold text-blue-400">RESELLER PORTAL</span>
+      <div className="mb-8 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex flex-wrap items-center gap-2 mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+              <span className="text-xs font-bold text-emerald-400">RZXHUB DIGITAL PORTAL · 24/7 AUTO SYSTEM</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+              <span className="text-xs font-semibold text-blue-400">ส่งของอัตโนมัติทันที</span>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            สวัสดี, <span className="text-primary">{partner.username}</span> 👋
+          </h1>
+          <p className="text-gray-400 text-sm">พื้นที่สำหรับจัดการระบบขายและเบิกสินค้าดิจิทัลอัตโนมัติ ดูแลทุกอย่างได้ในที่เดียว</p>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">
-          สวัสดี, <span className="text-primary">{partner.username}</span> 👋
-        </h1>
-        <p className="text-gray-400 text-sm">เลือกแพ็กเกจ กำหนดจำนวน และกดดึงคีย์ได้เลย</p>
       </div>
 
       {/* Credit Card - Enhanced Glassmorphism */}
