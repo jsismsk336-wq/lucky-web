@@ -1,31 +1,38 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
+import type { Product, ProductPlan, LicenseKey } from '../store/useStore';
 import { useTranslation } from '../hooks/useTranslation';
-import { Coins, KeyRound, ShoppingCart, Copy, CheckCircle, X, Package, Minus, Plus } from 'lucide-react';
+import { 
+  Coins, 
+  KeyRound, 
+  ShoppingCart, 
+  Copy, 
+  CheckCircle, 
+  X, 
+  Package, 
+  Flame, 
+  ArrowLeft, 
+  Check, 
+  Zap, 
+  ShieldCheck, 
+  Sparkles,
+  Layers,
+  ChevronRight
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCsrfToken, initSecurityHardening } from '../utils/security';
 import { AnnouncementPopupModal } from '../components/ui/AnnouncementPopupModal';
-import type { LicenseKey } from '../store/useStore';
-import { getCountFromServer, collection, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
-// ─── Result Modal (multi-key) ─────────────────────────────────────────────────
-function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => void }) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const { t } = useTranslation();
+// ─── Key Result Modal ─────────────────────────────────────────────────────────
+function KeyResultModal({ keyData, productName, planLabel, onClose }: { keyData: LicenseKey; productName: string; planLabel: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
 
-  const handleCopy = (id: string, keyStr: string) => {
-    navigator.clipboard.writeText(keyStr);
-    setCopiedId(id);
-    toast.success(t('reseller.copySuccess'));
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleCopyAll = () => {
-    const allKeys = keys.map(k => k.keyString).join('\n');
-    navigator.clipboard.writeText(allKeys);
-    toast.success(t('reseller.copyAllSuccess', { qty: keys.length }));
+  const handleCopy = () => {
+    navigator.clipboard.writeText(keyData.keyString);
+    setCopied(true);
+    toast.success('คัดลอกคีย์เรียบร้อยแล้ว!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -35,425 +42,469 @@ function KeyResultModal({ keys, onClose }: { keys: LicenseKey[]; onClose: () => 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
-      />
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+        className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+      >
         <motion.div
-          initial={{ scale: 0.85, opacity: 0, y: 30 }}
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          transition={{ type: 'spring', duration: 0.5 }}
-          className="bg-[#13151E] border border-green-500/30 w-full max-w-lg p-6 rounded-2xl pointer-events-auto shadow-[0_0_60px_rgba(34,197,94,0.15)] flex flex-col max-h-[85vh]"
+          onClick={(e) => e.stopPropagation()}
+          className="bg-[#12141F] border border-red-500/40 w-full max-w-lg p-6 rounded-2xl shadow-[0_0_60px_rgba(230,0,0,0.25)] relative"
         >
-          <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-gray-500 hover:text-white rounded-lg transition-colors">
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-white rounded-lg bg-gray-800/60 transition-colors cursor-pointer"
+          >
             <X size={18} />
           </button>
 
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-5 shrink-0">
-            <div className="flex items-center justify-center w-12 h-12 bg-green-500/10 rounded-xl border border-green-500/20">
-              <CheckCircle size={26} className="text-green-400" />
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 shrink-0 shadow-[0_0_20px_rgba(230,0,0,0.3)]">
+              <CheckCircle size={28} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{t('reseller.pullSuccess')}</h2>
-              <p className="text-gray-400 text-xs">
-                {t('reseller.receivedKeys')} <span className="text-green-400 font-bold">{keys.length} {t('reseller.keys')}</span> · 
-                {keys[0] ? (keys[0].durationDays < 0 ? `${Math.abs(keys[0].durationDays)} Hour(s)` : `${keys[0].durationDays} ${t('reseller.days')}`) : ''}/Device
+              <h2 className="text-lg font-bold text-white">สั่งซื้อสินค้าสำเร็จ!</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                คุณได้รับคีย์สินค้า <span className="text-red-400 font-bold">{productName}</span> ({planLabel})
               </p>
             </div>
           </div>
 
-          {/* Key list - scrollable */}
-          <div className="overflow-y-auto flex-1 space-y-2 mb-4 pr-1">
-            {keys.map((k) => (
-              <div key={k.id} className="flex items-center justify-between bg-[#0F111A] border border-gray-800/60 rounded-xl px-4 py-2.5 gap-3">
-                <span className="font-mono text-green-300 text-sm tracking-wide truncate flex-1">{k.keyString}</span>
-                <button
-                  onClick={() => handleCopy(k.id, k.keyString)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    copiedId === k.id
-                      ? 'bg-green-500/10 text-green-400'
-                      : 'bg-[#1C1F2E] text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {copiedId === k.id ? <CheckCircle size={13} /> : <Copy size={13} />}
-                  {copiedId === k.id ? t('reseller.copied') : t('reseller.copy')}
-                </button>
-              </div>
-            ))}
+          <div className="bg-[#0B0E14] border border-gray-800 rounded-xl p-4 mb-6 space-y-2">
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">รหัสคีย์ (License Key):</span>
+            <div className="flex items-center justify-between gap-3 bg-[#161925] border border-red-500/30 rounded-lg p-3 font-mono text-sm text-red-300 font-bold tracking-wider">
+              <span className="select-all break-all">{keyData.keyString}</span>
+              <button
+                onClick={handleCopy}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+                  copied
+                    ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                    : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(230,0,0,0.4)]'
+                }`}
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copied ? 'คัดลอกแล้ว' : 'คัดลอกคีย์'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Copy all button */}
-          {keys.length > 1 && (
-            <button
-              onClick={handleCopyAll}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all text-sm bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(66,133,244,0.3)] shrink-0"
-            >
-              <Copy size={16} />
-              {t('reseller.copyAll', { qty: keys.length })}
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white font-bold text-xs rounded-xl shadow-[0_0_20px_rgba(230,0,0,0.4)] transition-all cursor-pointer"
+          >
+            ตกลง / ปิดหน้าต่าง
+          </button>
         </motion.div>
-      </div>
+      </motion.div>
     </AnimatePresence>
   );
 }
 
-// ─── Quantity Picker ──────────────────────────────────────────────────────────
-function QuantityPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const decrement = () => onChange(Math.max(1, value - 1));
-  const increment = () => onChange(Math.min(50, value + 1));
-
-  return (
-    <div className="flex items-center gap-1 bg-[#0F111A] border border-gray-800/60 rounded-xl px-1 py-1">
-      <button
-        onClick={decrement}
-        disabled={value <= 1}
-        className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-      >
-        <Minus size={13} />
-      </button>
-      <input
-        type="number"
-        min={1}
-        max={50}
-        value={value}
-        onChange={(e) => {
-          const v = Math.max(1, Math.min(50, parseInt(e.target.value) || 1));
-          onChange(v);
-        }}
-        className="w-10 text-center bg-transparent text-white text-sm font-bold focus:outline-none"
-      />
-      <button
-        onClick={increment}
-        disabled={value >= 50}
-        className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-      >
-        <Plus size={13} />
-      </button>
-    </div>
-  );
-}
-
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ─── Main Reseller Dashboard Page ─────────────────────────────────────────────
 export function ResellerDashboard() {
-  const { currentReseller, packages, redeemKey } = useStore();
+  const { categories, products, keys, currentReseller, purchaseProductKey } = useStore();
   const { t } = useTranslation();
-  const [resultKeys, setResultKeys] = useState<LicenseKey[] | null>(null);
-  const [redeemingDays, setRedeemingDays] = useState<number | null>(null);
-  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [stockCounts, setStockCounts] = useState<Record<number, number>>({});
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [purchasing, setPurchasing] = useState(false);
+  const [boughtKey, setBoughtKey] = useState<LicenseKey | null>(null);
 
   useEffect(() => {
     const cleanup = initSecurityHardening();
     return cleanup;
   }, []);
 
-  useEffect(() => {
-    const fetchStock = async () => {
-      const counts: Record<number, number> = {};
-      await Promise.all(packages.map(async (pkg) => {
-        try {
-          const q = query(
-            collection(db, 'keys'),
-            where('durationDays', '==', pkg.days),
-            where('status', '==', 'unused')
-          );
-          const snapshot = await getCountFromServer(q);
-          counts[pkg.days] = snapshot.data().count;
-        } catch (e) {
-          console.error("Failed to fetch stock for", pkg.days, e);
-          counts[pkg.days] = 0;
-        }
-      }));
-      setStockCounts(counts);
-    };
-    
-    if (packages.length > 0) {
-      fetchStock();
+  // Filter products by selected category
+  const filteredProducts = selectedCategory === 'all'
+    ? products
+    : products.filter(p => p.categoryId === selectedCategory);
+
+  // Helper: calculate total stock count across all plans for a product
+  const getProductTotalStock = (productId: string) => {
+    return keys.filter(k => k.productId === productId && k.status === 'unused').length;
+  };
+
+  // Helper: calculate stock count for a specific plan
+  const getPlanStock = (productId: string, planId: string) => {
+    return keys.filter(k => k.productId === productId && k.planId === planId && k.status === 'unused').length;
+  };
+
+  // Get price display (e.g. ฿200 or ฿25 - ฿150)
+  const getProductPriceLabel = (product: Product) => {
+    if (!product.plans || product.plans.length === 0) return '฿0';
+    const costs = product.plans.map(p => p.cost);
+    const minCost = Math.min(...costs);
+    const maxCost = Math.max(...costs);
+    if (minCost === maxCost) return `฿${minCost}`;
+    return `฿${minCost} - ฿${maxCost}`;
+  };
+
+  const handleOpenProductDetail = (product: Product) => {
+    setSelectedProduct(product);
+    if (product.plans && product.plans.length > 0) {
+      setSelectedPlanId(product.plans[0].id);
+    } else {
+      setSelectedPlanId('');
     }
-  }, [packages]);
+  };
 
-  const partner = currentReseller;
-  if (!partner) return null;
-
-  const getStock = (days: number) => stockCounts[days] || 0;
-  const getQty = (days: number) => quantities[days] ?? 1;
-  const setQty = (days: number, v: number) => setQuantities(prev => ({ ...prev, [days]: v }));
-
-  const isGlobalLocked = redeemingDays !== null || Date.now() < cooldownUntil;
-
-  const handleRedeem = async (days: number) => {
-    if (isGlobalLocked) {
-      toast.error(t('reseller.waitPrevious'));
+  const handleConfirmPurchase = async () => {
+    if (!selectedProduct || !selectedPlanId) {
+      toast.error('กรุณาเลือกแพ็กเกจสินค้าที่ต้องการสั่งซื้อ');
       return;
     }
 
-    const token = getCsrfToken();
-    if (!token) {
-      toast.error(t('reseller.invalidSession'));
+    const selectedPlan = selectedProduct.plans.find(p => p.id === selectedPlanId);
+    if (!selectedPlan) return;
+
+    const planStock = getPlanStock(selectedProduct.id, selectedPlan.id);
+    if (planStock <= 0) {
+      toast.error('สินค้าแพ็กเกจนี้หมดสต็อกแล้ว');
       return;
     }
 
-    const qty = getQty(days);
-    setRedeemingDays(days);
-    const result = await redeemKey(days, qty, token);
-    setRedeemingDays(null);
+    if ((currentReseller?.balance || 0) < selectedPlan.cost) {
+      toast.error(`เครดิตไม่เพียงพอ (ต้องการ ${selectedPlan.cost} เครดิต)`);
+      return;
+    }
 
-    if (result === 'maintenance') {
-      toast.error('ระบบปิดปรับปรุงชั่วคราว ไม่สามารถดึงคีย์ได้ในขณะนี้');
-    } else if (result === 'no_credit') {
-      toast.error(t('reseller.notEnoughCredit'));
-    } else if (result === 'no_stock') {
-      toast.error(t('reseller.stockEmpty'));
-    } else if (result === 'csrf_error') {
-      toast.error(t('reseller.securityError'));
-    } else if (result === 'locked') {
-      toast.error(t('reseller.processing'));
-    } else if (typeof result === 'string' && result.startsWith('transaction_error:')) {
-      toast.error(`ระบบขัดข้อง: ${result.split(':')[1]}`);
-    } else if (Array.isArray(result)) {
-      if (result.length < qty) {
-        toast(t('reseller.partialKeys', { received: result.length, requested: qty }), { icon: '⚠️' });
+    setPurchasing(true);
+    try {
+      const csrfToken = getCsrfToken();
+      const res = await purchaseProductKey(selectedProduct.id, selectedPlan.id, csrfToken);
+
+      if (res.success && res.key) {
+        setBoughtKey(res.key);
+        toast.success(`สั่งซื้อ ${selectedProduct.title} (${selectedPlan.label}) สำเร็จ!`);
+      } else {
+        toast.error(res.error || 'เกิดข้อผิดพลาดในการดึงคีย์');
       }
-      setCooldownUntil(Date.now() + 2000);
-      setResultKeys(result);
+    } catch (err: any) {
+      toast.error('เกิดข้อผิดพลาด: ' + (err?.message || ''));
+    } finally {
+      setPurchasing(false);
     }
   };
 
   return (
-    <div className="animate-in fade-in duration-500 relative min-h-full">
-      {/* Dynamic Background Blurs */}
-      <div className="absolute top-[-15%] right-[-5%] w-[50%] h-[500px] bg-gradient-to-bl from-blue-600/20 to-purple-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[400px] bg-gradient-to-tr from-emerald-600/10 to-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
+    <div className="space-y-8 font-sans pb-16 text-white select-none">
+      <AnnouncementPopupModal />
 
-      {/* Header */}
-      <div className="mb-8 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex flex-wrap items-center gap-2 mb-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <span className="text-xs font-bold text-emerald-400">LUCKY STORE · 24/7 AUTO SYSTEM</span>
-            </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
-              <span className="text-xs font-semibold text-blue-400">ส่งของอัตโนมัติทันที</span>
+      {/* Credit Status Card Header */}
+      <div className="bg-[#12141F]/90 border border-red-500/20 rounded-2xl p-6 backdrop-blur-xl shadow-[0_0_40px_rgba(230,0,0,0.12)] flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-red-600 to-rose-600 p-0.5 shadow-[0_0_25px_rgba(230,0,0,0.5)]">
+            <div className="w-full h-full bg-[#0B0E14] rounded-[14px] flex items-center justify-center text-red-500">
+              <Coins size={28} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            สวัสดี, <span className="text-primary">{partner.username}</span> 👋
-          </h1>
-          <p className="text-gray-400 text-sm">พื้นที่สำหรับจัดการระบบขายและเบิกสินค้าดิจิทัลอัตโนมัติ ดูแลทุกอย่างได้ในที่เดียว</p>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-wide">
+              ยินดีต้อนรับ, <span className="text-red-400">{currentReseller?.username || 'Reseller'}</span>
+            </h1>
+            <p className="text-xs text-gray-400 mt-1">
+              ร้านค้าจำหน่ายคีย์สินค้าดิจิทัลและโปรแกรมอัตโนมัติ 24 ชั่วโมง
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-[#0B0E14] border border-gray-800 rounded-xl px-5 py-3 flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <span className="text-xs text-gray-400 font-medium">เครดิตคงเหลือ:</span>
+          <span className="text-lg font-bold text-emerald-400 font-mono tracking-wider">
+            ฿{(currentReseller?.balance || 0).toLocaleString()}
+          </span>
         </div>
       </div>
 
-      {/* Credit Card - Enhanced Glassmorphism */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-[#1c2135] via-[#12141D] to-[#0a0c13] border border-blue-500/20 rounded-3xl p-8 mb-10 relative overflow-hidden z-10 shadow-[0_8px_30px_rgba(0,0,0,0.4)] group"
-      >
-        <div className="absolute top-[-50%] right-[-10%] w-64 h-64 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
-        <div className="absolute bottom-[-50%] left-10 w-48 h-48 bg-primary/10 rounded-full blur-[50px] pointer-events-none"></div>
-        
-        <div className="flex flex-col relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.15)]">
-              <Coins size={22} className="text-blue-400" />
-            </div>
-            <span className="text-blue-100/70 font-medium tracking-wide">{t('reseller.creditBalance')}</span>
-          </div>
-          <div className="text-5xl font-bold text-white tracking-tight flex items-baseline gap-2">
-            {partner.balance.toLocaleString()}
-            <span className="text-lg font-medium text-blue-200/50">{t('reseller.credit')}</span>
+      {/* Category Filter Bar */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-bold text-gray-200">
+            <Layers size={16} className="text-red-500" />
+            <span>หมวดหมู่ : <strong className="text-red-400 uppercase">{categories.find(c => c.id === selectedCategory)?.name || 'ทั้งหมด'}</strong></span>
           </div>
         </div>
-      </motion.div>
 
-      {/* Packages */}
-      <div className="mb-4 flex items-center gap-2 z-10 relative">
-        <Package size={18} className="text-gray-400" />
-        <h2 className="text-white font-bold">{t('reseller.selectPackage')}</h2>
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              selectedCategory === 'all'
+                ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(230,0,0,0.5)] scale-105'
+                : 'bg-[#12141F] border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+            }`}
+          >
+            ทั้งหมด ({products.length})
+          </button>
+
+          {categories.map((cat) => {
+            const catCount = products.filter(p => p.categoryId === cat.id).length;
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(230,0,0,0.5)] scale-105'
+                    : 'bg-[#12141F] border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                }`}
+              >
+                {cat.name} ({catCount})
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-        {packages.map((pkg) => {
-          const stock = getStock(pkg.days);
-          const qty = getQty(pkg.days);
-          const unitCost = partner.customPrices?.[pkg.days] ?? pkg.cost;
-          const totalCost = unitCost * qty;
-          const canAfford = partner.balance >= unitCost; 
-          const canAffordQty = partner.balance >= totalCost;
-          const available = stock > 0 && canAfford;
-
-          const accentClass = 
-            pkg.days === 1 ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/5 border-blue-500/30 text-blue-400' :
-            pkg.days === 3 ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/5 border-green-500/30 text-green-400' :
-            pkg.days === 7 ? 'bg-gradient-to-br from-orange-500/20 to-amber-500/5 border-orange-500/30 text-orange-400' :
-            'bg-gradient-to-br from-purple-500/20 to-pink-500/5 border-purple-500/30 text-purple-400';
-
-          const textGradient = 
-            pkg.days === 1 ? 'from-blue-400 via-cyan-300 to-blue-200' :
-            pkg.days === 3 ? 'from-green-400 via-emerald-300 to-green-200' :
-            pkg.days === 7 ? 'from-orange-400 via-amber-300 to-orange-200' :
-            'from-purple-400 via-pink-300 to-purple-200';
-
-          const glowHoverClass =
-            pkg.days === 1 ? 'hover:shadow-[0_10px_40px_rgba(59,130,246,0.15)] hover:border-blue-500/40' :
-            pkg.days === 3 ? 'hover:shadow-[0_10px_40px_rgba(16,185,129,0.15)] hover:border-emerald-500/40' :
-            pkg.days === 7 ? 'hover:shadow-[0_10px_40px_rgba(249,115,22,0.15)] hover:border-orange-500/40' :
-            'hover:shadow-[0_10px_40px_rgba(168,85,247,0.15)] hover:border-purple-500/40';
-
-          const buttonGradient = 
-            pkg.days === 1 ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-[0_5px_20px_rgba(59,130,246,0.3)] border-blue-400/20' :
-            pkg.days === 3 ? 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 shadow-[0_5px_20px_rgba(16,185,129,0.3)] border-emerald-400/20' :
-            pkg.days === 7 ? 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 shadow-[0_5px_20px_rgba(249,115,22,0.3)] border-orange-400/20' :
-            'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-[0_5px_20px_rgba(168,85,247,0.3)] border-purple-400/20';
+      {/* Product Grid Catalog (Matching Screenshot 1) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {filteredProducts.map((prod) => {
+          const totalStock = getProductTotalStock(prod.id);
+          const priceLabel = getProductPriceLabel(prod);
+          const isOutStock = totalStock <= 0;
 
           return (
             <motion.div
-              key={pkg.days}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`bg-[#0F121D]/90 backdrop-blur-md rounded-2xl p-5 flex flex-col gap-3.5 transition-all duration-300 relative overflow-hidden group border ${
-                available ? `border-white/10 hover:border-indigo-500/40 hover:-translate-y-1 ${glowHoverClass}` : 'border-white/5 opacity-60'
-              }`}
+              key={prod.id}
+              whileHover={{ y: -4 }}
+              className="bg-[#12141F] border border-gray-800/80 hover:border-red-500/40 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 shadow-lg group cursor-pointer"
+              onClick={() => handleOpenProductDetail(prod)}
             >
-              {available && <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
-              
-              <div className="flex justify-between items-start relative z-10">
-                <div>
-                  <div className={`font-semibold text-transparent bg-clip-text bg-gradient-to-r ${textGradient} text-xl tracking-wide`}>
-                    {pkg.label}
-                  </div>
-                  <div className={`text-xs mt-1 font-medium ${accentClass} inline-block px-2.5 py-0.5 rounded-md`}>
-                    {unitCost} {t('reseller.keyPerCredit')}
-                  </div>
+              <div>
+                {/* Product Cover Image Container */}
+                <div className="relative w-full aspect-square bg-[#0B0E14] overflow-hidden">
+                  {prod.imageUrl ? (
+                    <img 
+                      src={prod.imageUrl} 
+                      alt={prod.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
+                      ไม่มีรูปภาพ
+                    </div>
+                  )}
+
+                  {/* Top Badges */}
+                  {prod.isPopular && (
+                    <span className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-bold flex items-center gap-1 shadow-[0_0_15px_rgba(230,0,0,0.6)]">
+                      <Flame size={12} />
+                      ยอดฮิต
+                    </span>
+                  )}
                 </div>
-                <div className={`text-[11px] px-2.5 py-1 rounded-md font-medium tracking-wide ${
-                  stock > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                }`}>
-                  {stock > 0 ? `${t('reseller.stock')} ${stock}` : t('reseller.outOfStock')}
+
+                {/* Info Content */}
+                <div className="p-3.5">
+                  <h3 className="text-xs font-bold text-white tracking-wide truncate mb-2">{prod.title}</h3>
+                  
+                  <div className="flex items-center justify-between text-[11px] mb-3">
+                    <span className="text-red-500 font-bold text-sm">{priceLabel}</span>
+                    <span className={isOutStock ? 'text-red-400 font-medium' : 'text-gray-400 font-medium'}>
+                      {isOutStock ? 'สินค้าหมด' : `เหลือ ${totalStock} ชิ้น`}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-[#090B12]/80 rounded-xl p-3.5 border border-white/5 mt-1 relative z-10">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <div className="p-1 bg-white/5 rounded-md">
-                    <KeyRound size={13} className="text-gray-400" />
-                  </div>
-                  <span className="text-xs text-gray-300 font-normal">{pkg.label}</span>
-                </div>
-                {/* Quantity picker */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400 font-light">{t('reseller.quantity')}</span>
-                  <QuantityPicker
-                    value={qty}
-                    onChange={(v) => setQty(pkg.days, v)}
-                  />
-                </div>
-                {/* Total cost */}
-                <div className="mt-2.5 text-right">
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${
-                    canAffordQty ? accentClass : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}>
-                    {t('reseller.total', { cost: totalCost.toLocaleString() })}
-                  </span>
+              {/* Action Button & Sold Count */}
+              <div className="p-3.5 pt-0 space-y-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenProductDetail(prod);
+                  }}
+                  className={`w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md ${
+                    isOutStock
+                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(230,0,0,0.4)] active:scale-95'
+                  }`}
+                >
+                  <ShoppingCart size={13} />
+                  <span>ซื้อเลย</span>
+                </button>
+
+                <div className="text-[10px] text-gray-500 text-center flex items-center justify-center gap-1">
+                  <Flame size={11} className="text-amber-500" />
+                  <span>ขายไปแล้ว {(prod.soldCount || 0).toLocaleString()} ชิ้น</span>
                 </div>
               </div>
-
-              <button
-                onClick={() => handleRedeem(pkg.days)}
-                disabled={!available || isGlobalLocked}
-                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-xs transition-all select-none relative z-10 tracking-wider ${
-                  redeemingDays === pkg.days
-                    ? 'bg-gray-800/50 text-white cursor-not-allowed animate-pulse border border-gray-700/30'
-                    : available && !isGlobalLocked
-                      ? canAffordQty
-                        ? `${buttonGradient} text-white active:scale-[0.98] border`
-                        : 'bg-red-500/80 hover:bg-red-500 text-white active:scale-[0.98] border border-red-400/20 shadow-[0_5px_20px_rgba(239,68,68,0.3)]'
-                      : 'bg-gray-800/40 text-gray-500 cursor-not-allowed border border-gray-700/30'
-                }`}
-              >
-                {redeemingDays === pkg.days ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
-                    {t('reseller.pulling')}
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart size={16} />
-                    {!canAfford ? t('reseller.noCredit') : stock === 0 ? t('reseller.outOfStock') : !canAffordQty ? t('reseller.pullKeys', { qty: Math.min(qty, Math.floor(partner.balance / unitCost), stock) }) : t('reseller.pullKeys', { qty })}
-                  </>
-                )}
-              </button>
             </motion.div>
           );
         })}
       </div>
 
-      {/* API Token Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-gradient-to-br from-[#1c2135] via-[#12141D] to-[#0a0c13] border border-blue-500/20 rounded-3xl p-8 mt-10 relative overflow-hidden z-10 shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2.5 bg-purple-500/10 border border-purple-500/20 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-            <KeyRound size={22} className="text-purple-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">API ดึงคีย์อัตโนมัติ (สำหรับร้านค้า/Bot)</h2>
+      {filteredProducts.length === 0 && (
+        <div className="bg-[#12141F] border border-gray-800 rounded-2xl p-12 text-center text-gray-500">
+          <Package size={40} className="mx-auto mb-3 opacity-30 text-red-500" />
+          <p className="text-sm">ไม่มีสินค้าในหมวดหมู่นี้</p>
         </div>
-        
-        <p className="text-gray-400 text-sm mb-6 max-w-2xl">
-          ใช้ API Token นี้นำไปเชื่อมกับระบบอัตโนมัติของตัวแทน (เช่น Discord Bot หรือ เว็บขายคีย์) 
-          ระบบจะหักเครดิตตามจริง (รองรับราคาส่ง) และไม่อนุญาตให้ดึงถ้าไม่มีของในสต็อก
-        </p>
-        
-        <div className="bg-[#0B0D14]/80 rounded-2xl p-5 border border-gray-800/50 relative mb-6">
-          <div className="text-xs text-gray-500 mb-2 font-medium">API TOKEN ของคุณ (ห้ามให้ใครเด็ดขาด)</div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-            <div className="font-mono text-purple-300 text-sm tracking-wide bg-[#161925] px-4 py-3 rounded-xl border border-gray-800 flex-1 overflow-x-auto whitespace-nowrap">
-              {partner.apiToken || 'ยังไม่มี API Token (ติดต่อแอดมินให้รีเซ็ตให้ 1 ครั้ง)'}
-            </div>
-            {partner.apiToken && (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(partner.apiToken || '');
-                  toast.success('คัดลอก API Token แล้ว');
-                }}
-                className="shrink-0 flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-medium transition-all text-sm bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
-              >
-                <Copy size={16} /> คัดลอก
-              </button>
-            )}
-          </div>
-        </div>
-        
-        <div className="bg-[#161925] rounded-2xl p-5 border border-gray-800/50">
-           <div className="text-xs text-gray-400 mb-3 font-medium">ตัวอย่างการเรียกใช้งาน (Endpoint URL) แยกตามแพ็กเกจ</div>
-           <div className="space-y-3">
-             {packages.map(pkg => (
-               <div key={pkg.days} className="bg-[#0F111A] p-3 rounded-xl border border-gray-800">
-                 <div className="text-xs text-purple-400 mb-1.5 font-bold">▶ ลิงก์ดึงคีย์ {pkg.label}</div>
-                 <code className="text-[12px] text-green-400 font-mono break-all block select-all">
-                   GET {typeof window !== 'undefined' ? window.location.origin : ''}/api/pull?token={partner.apiToken || 'YOUR_TOKEN'}&days={pkg.days}&qty=1
-                 </code>
-               </div>
-             ))}
-           </div>
-        </div>
-      </motion.div>
-
-      {resultKeys && (
-        <KeyResultModal keys={resultKeys} onClose={() => setResultKeys(null)} />
       )}
 
-      <AnnouncementPopupModal />
+      {/* ========================================================================= */}
+      {/* PRODUCT DETAIL & SELECTION MODAL (Matching Screenshot 2 100%)              */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0B0E14] border border-gray-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl relative my-8"
+            >
+              {/* Top Navigation & Breadcrumbs */}
+              <div className="flex items-center justify-between border-b border-gray-800/80 pb-4 mb-6">
+                <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
+                  <span>หน้าแรก</span>
+                  <ChevronRight size={13} />
+                  <span>ร้านค้า</span>
+                  <ChevronRight size={13} />
+                  <span>{categories.find(c => c.id === selectedProduct.categoryId)?.name || 'หมวดหมู่'}</span>
+                  <ChevronRight size={13} />
+                  <span className="text-white font-bold">{selectedProduct.title}</span>
+                </div>
+
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#12141F] border border-gray-800 hover:border-gray-700 text-gray-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={14} />
+                  <span>ย้อนกลับ</span>
+                </button>
+              </div>
+
+              {/* Product Header Title */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white tracking-wide">{selectedProduct.title}</h2>
+                  <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                    {categories.find(c => c.id === selectedProduct.categoryId)?.name || 'GENERAL'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Two Column Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                {/* Left Column: Large Cover Image */}
+                <div className="md:col-span-5">
+                  <div className="w-full aspect-square bg-[#12141F] border border-gray-800 rounded-2xl overflow-hidden relative shadow-xl">
+                    {selectedProduct.imageUrl ? (
+                      <img 
+                        src={selectedProduct.imageUrl} 
+                        alt={selectedProduct.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
+                        ไม่มีรูปภาพ
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Column: Plans Selector & Details */}
+                <div className="md:col-span-7 flex flex-col justify-between space-y-6">
+                  <div>
+                    {/* Header Title & Price starting tag */}
+                    <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+                      <h3 className="text-lg font-bold text-white">{selectedProduct.title}</h3>
+                      <div className="text-right">
+                        <span className="text-[11px] text-gray-400 block">ราคาต่อชิ้น</span>
+                        <span className="text-red-500 font-bold text-base">
+                          {selectedPlanId 
+                            ? `฿${selectedProduct.plans.find(p => p.id === selectedPlanId)?.cost || 0} บาท`
+                            : getProductPriceLabel(selectedProduct)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Plan Options Selector Grid (Matching Screenshot 2) */}
+                    <div className="space-y-2 mb-6">
+                      <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
+                        เลือกแผนราคา
+                      </label>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {selectedProduct.plans.map((plan) => {
+                          const planStock = getPlanStock(selectedProduct.id, plan.id);
+                          const isSelected = selectedPlanId === plan.id;
+                          const isOutOfStock = planStock <= 0;
+
+                          return (
+                            <button
+                              key={plan.id}
+                              type="button"
+                              onClick={() => !isOutOfStock && setSelectedPlanId(plan.id)}
+                              disabled={isOutOfStock}
+                              className={`p-3.5 rounded-xl border text-left relative transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-red-950/40 border-red-500 shadow-[0_0_20px_rgba(230,0,0,0.3)]'
+                                  : isOutOfStock
+                                  ? 'bg-[#12141F]/40 border-gray-800/40 opacity-50 cursor-not-allowed'
+                                  : 'bg-[#12141F] border-gray-800 hover:border-gray-700'
+                              }`}
+                            >
+                              {/* Selected Checkmark Badge */}
+                              {isSelected && (
+                                <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center">
+                                  <Check size={11} />
+                                </span>
+                              )}
+
+                              <div className="text-xs font-bold text-white mb-1">{plan.label}</div>
+                              <div className="text-sm font-bold text-red-400">฿{plan.cost}</div>
+                              <div className={`text-[10px] mt-1.5 font-medium ${isOutOfStock ? 'text-red-400' : 'text-gray-400'}`}>
+                                {isOutOfStock ? 'สินค้าหมด' : `เหลือ ${planStock} ชิ้น`}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Product Description */}
+                    <div className="bg-[#12141F] border border-gray-800/80 rounded-xl p-4 space-y-2">
+                      <span className="text-xs font-bold text-red-400 uppercase tracking-wider block">รายละเอียด</span>
+                      <p className="text-xs text-gray-300 leading-relaxed font-light whitespace-pre-line">
+                        {selectedProduct.description || '• บริการระบบอัตโนมัติ 24 ชั่วโมง\n• ปลอดภัย ใช้งานง่าย ได้รับของทันที'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Purchase Action Button */}
+                  <div className="pt-4 border-t border-gray-800">
+                    <button
+                      onClick={handleConfirmPurchase}
+                      disabled={purchasing || !selectedPlanId || getPlanStock(selectedProduct.id, selectedPlanId) <= 0}
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs transition-all shadow-[0_0_25px_rgba(230,0,0,0.5)] hover:shadow-[0_0_35px_rgba(230,0,0,0.8)] active:scale-95 disabled:opacity-50 cursor-pointer tracking-wider flex items-center justify-center gap-2"
+                    >
+                      <ShoppingCart size={15} />
+                      <span>{purchasing ? 'กำลังดึงคีย์...' : 'สั่งซื้อสินค้า / ดึงคีย์ ➔'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Extracted Key Modal */}
+      {boughtKey && selectedProduct && (
+        <KeyResultModal
+          keyData={boughtKey}
+          productName={selectedProduct.title}
+          planLabel={selectedProduct.plans.find(p => p.id === boughtKey.planId)?.label || 'แพ็กเกจ'}
+          onClose={() => setBoughtKey(null)}
+        />
+      )}
     </div>
   );
 }
