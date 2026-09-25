@@ -98,6 +98,7 @@ export interface WebhooksState {
 interface AdminState {
   adminBalance: number;
   globalLogoUrl: string | null;
+  landingBgUrl: string | null;
   apiEndpoint: string | null;
   apiToken: string | null;
   adminPasswordHash: string | null;
@@ -118,6 +119,7 @@ interface AdminState {
 
   // System Settings
   updateGlobalLogo: (base64: string | null) => void;
+  updateLandingBgUrl: (url: string | null) => void;
   updateApiSettings: (endpoint: string, token: string) => void;
   updateWebhook: (type: keyof WebhooksState, config: WebhookConfig) => void;
   updateAdminPassword: (currentPass: string, newPass: string) => boolean;
@@ -265,6 +267,11 @@ export const useStore = create<AdminState>()(
       updateGlobalLogo: (base64) => {
         set({ globalLogoUrl: base64 });
         setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
+      },
+
+      updateLandingBgUrl: (url) => {
+        set({ landingBgUrl: url });
+        setDoc(doc(db, 'config', 'global'), { landingBgUrl: url }, { merge: true }).catch(console.error);
       },
 
       toggleMaintenance: (password) => {
@@ -957,6 +964,7 @@ export async function initFirebaseSync() {
       useStore.setState({ 
         adminBalance: data.adminBalance,
         globalLogoUrl: data.logoUrl || null,
+        landingBgUrl: data.landingBgUrl || null,
         apiEndpoint: data.apiEndpoint || "",
         apiToken: data.apiToken || "",
         adminPasswordHash: data.adminPasswordHash || null,
