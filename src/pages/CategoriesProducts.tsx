@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { Category, Product, ProductPlan } from '../store/useStore';
 import { GlassCard } from '../components/ui/GlassCard';
@@ -58,6 +58,52 @@ export function CategoriesProducts() {
   const [newPlanLabel, setNewPlanLabel] = useState('');
   const [newPlanDays, setNewPlanDays] = useState('1');
   const [newPlanCost, setNewPlanCost] = useState('10');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('ไฟล์ภาพขนาดใหญ่เกิน 10MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_DIM = 800;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+        setProductImageUrl(compressedBase64);
+        toast.success('อัปโหลดรูปภาพสินค้าสำเร็จ!');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // --- STOCK UPLOAD STATE ---
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -664,14 +710,68 @@ export function CategoriesProducts() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1.5">URL รูปภาพสินค้า (Image Cover)</label>
-                <div className="flex gap-2">
+                <label className="block text-xs font-semibold text-gray-300 mb-2">
+                  รูปภาพสินค้า (Image Cover) *
+                </label>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageFileSelect}
+                  className="hidden"
+                />
+
+                {productImageUrl ? (
+                  <div className="relative w-full h-44 bg-[#0B0E14] border border-gray-800 rounded-xl overflow-hidden group">
+                    <img 
+                      src={productImageUrl} 
+                      alt="Product preview" 
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg shadow-lg cursor-pointer"
+                      >
+                        เปลี่ยนรูปภาพ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProductImageUrl('')}
+                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-red-400 text-xs font-bold rounded-lg cursor-pointer"
+                      >
+                        ลบรูปภาพ
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-700 hover:border-red-500 bg-[#0B0E14] hover:bg-red-950/20 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-red-600/10 border border-red-500/20 text-red-500 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                      <ImageIcon size={22} />
+                    </div>
+                    <p className="text-xs font-bold text-white mb-1">
+                      📁 กดเลือกรูปภาพสินค้าจากเครื่อง
+                    </p>
+                    <p className="text-[11px] text-gray-400 font-light">
+                      รองรับไฟล์ JPG, PNG, WEBP (แปลงความละเอียดสูงลงฐานข้อมูลโดยตรง)
+                    </p>
+                  </div>
+                )}
+
+                {/* Optional URL input */}
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500 shrink-0">หรือระบุ URL:</span>
                   <input
                     type="url"
-                    value={productImageUrl}
+                    value={productImageUrl.startsWith('data:') ? '' : productImageUrl}
                     onChange={(e) => setProductImageUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full px-4 py-2.5 bg-[#0B0E14] border border-gray-800 rounded-xl text-white text-xs focus:border-red-500 focus:outline-none"
+                    className="flex-1 px-3 py-1 bg-[#0B0E14] border border-gray-800 rounded-lg text-white text-[11px] focus:border-red-500 focus:outline-none"
                   />
                 </div>
               </div>
