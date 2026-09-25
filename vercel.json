@@ -6,7 +6,6 @@
     },
     {
       "source": "/(.*)",
-ฆฤฏฆ"
       "destination": "/index.html"
     }
   ]
