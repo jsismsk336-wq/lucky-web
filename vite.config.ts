@@ -1,0 +1,27 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api/proxy-genkey': {
+        target: 'https://nwtr.dev/meowt/api/genkey.php',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/proxy-genkey/, '')
+      }
+    }
+  },
+  build: {
+    sourcemap: false,
+    minify: true,
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+})

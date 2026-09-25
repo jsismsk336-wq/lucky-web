@@ -1,0 +1,199 @@
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, collection, getDocs, doc, getDoc, writeBatch, runTransaction, query, where, limit } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBiiVxN8y0BDJtm0nGGb5sMd6eBulNxzSw",
+  authDomain: "lucky-db-4cca9.firebaseapp.com",
+  projectId: "lucky-db-4cca9",
+  storageBucket: "lucky-db-4cca9.firebasestorage.app",
+  messagingSenderId: "714417643330",
+  appId: "1:714417643330:web:8112a9272db60c97b6b2db",
+  measurementId: "G-4EWVJV5VQ8"
+};
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
+
+export default async function handler(req: any, res: any) {
+  // CORS support
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    // Check maintenance mode
+    const globalDoc = await getDoc(doc(db, 'config', 'global'));
+    if (globalDoc.exists() && globalDoc.data().maintenanceMode === true) {
+      return res.status(503).json({ status: 'error', message: 'ระบบกำลังปิดปรับปรุงชั่วคราว (System Under Maintenance)' });
+    }
+
+    const { token, days, qty } = req.method === 'POST' ? req.body : req.query;
+
+    if (!token || !days) {
+      return res.status(400).json({ status: 'error', message: 'Missing parameters (token, days)' });
+    }
+
+    const durationDays = parseInt(days);
+    const quantity = parseInt(qty) || 1;
+
+    if (quantity < 1 || quantity > 50) {
+      return res.status(400).json({ status: 'error', message: 'Quantity must be between 1 and 50' });
+    }
+
+    // 1. Authenticate Partner via API Token
+    const qPartner = query(collection(db, 'partners'), where('apiToken', '==', token), limit(1));
+    const partnersSnap = await getDocs(qPartner);
+    
+    let partner: any = null;
+    let partnerId = '';
+
+    if (!partnersSnap.empty) {
+      partner = partnersSnap.docs[0].data();
+      partnerId = partnersSnap.docs[0].id;
+    }
+
+    if (!partner) {
+      return res.status(401).json({ status: 'error', message: 'Invalid API Token' });
+    }
+    
+    if (partner.status === 'suspended') {
+      return res.status(403).json({ status: 'error', message: 'Account is suspended' });
+    }
+
+    // 2. Get packages to find cost
+    const pkgSnap = await getDoc(doc(db, 'packages', durationDays.toString()));
+    if (!pkgSnap.exists()) {
+      return res.status(400).json({ status: 'error', message: `Package not found for ${durationDays} days` });
+    }
+    
+    const pkg = pkgSnap.data();
+    const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
+    
+    // 3. Find available keys in stock (Using query limit to prevent quota exhaustion)
+    const affordableQty = Math.floor(partner.balance / unitCost);
+    const maxPossibleQty = Math.min(quantity, affordableQty);
+    
+    if (maxPossibleQty <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
+    }
+
+    const keysRef = collection(db, 'keys');
+    const q = query(keysRef, where('durationDays', '==', durationDays), where('status', '==', 'unused'), limit(maxPossibleQty + 5));
+    const keysSnap = await getDocs(q);
+    
+    const candidateKeys: any[] = [];
+    keysSnap.forEach(d => {
+      candidateKeys.push({ id: d.id, ...d.data() });
+    });
+
+    if (candidateKeys.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'No keys in stock' });
+    }
+
+    const targetQty = Math.min(maxPossibleQty, candidateKeys.length);
+
+    if (targetQty <= 0) {
+      return res.status(400).json({ status: 'error', message: 'Insufficient balance or stock' });
+    }
+
+    // 4. Transaction update (Bullet-proof Anti-Race Condition)
+    const pRef = doc(db, 'partners', partnerId);
+    let redeemedKeys: string[] = [];
+    let remainingBalance = 0;
+
+    await runTransaction(db, async (transaction) => {
+      // Re-read partner balance inside transaction
+      const pSnap = await transaction.get(pRef);
+      if (!pSnap.exists()) throw new Error("Partner not found");
+      
+      const currentBalance = (pSnap.data() as any).balance;
+      
+      // Re-read all candidate keys in parallel to avoid massive delay
+      const kSnaps = await Promise.all(candidateKeys.map(c => transaction.get(doc(db, 'keys', c.id))));
+      
+      const verifiedKeys: any[] = [];
+      for (const kSnap of kSnaps) {
+        if (verifiedKeys.length >= targetQty) break;
+        if (kSnap.exists() && (kSnap.data() as any).status === 'unused') {
+          verifiedKeys.push({ id: kSnap.id, keyString: (kSnap.data() as any).keyString });
+        }
+      }
+
+      if (verifiedKeys.length === 0) {
+        throw new Error("No keys available in stock (Race Condition Prevented)");
+      }
+
+      const actualQty = verifiedKeys.length;
+      const totalCost = unitCost * actualQty;
+
+      if (currentBalance < totalCost) {
+        throw new Error("Insufficient balance");
+      }
+
+      const newBalance = currentBalance - totalCost;
+      remainingBalance = newBalance;
+      transaction.set(pRef, { balance: newBalance }, { merge: true });
+
+      const now = Date.now();
+      for (const k of verifiedKeys) {
+        const keyRef = doc(db, 'keys', k.id);
+        transaction.set(keyRef, {
+          status: 'active',
+          redeemedBy: partnerId,
+          redeemedAt: now
+        }, { merge: true });
+        redeemedKeys.push(k.keyString);
+      }
+    });
+
+    // Send Discord Log if webhook is configured
+    try {
+      const whSnap = await getDoc(doc(db, 'config', 'webhooks'));
+      if (whSnap.exists()) {
+        const whData = whSnap.data();
+        if (whData.resellerLogs?.enabled && whData.resellerLogs.url) {
+          const keyListString = redeemedKeys.join('\n');
+          const description = `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่ (ผ่านระบบ API)\n\n**รายการคีย์ที่ได้:**\n\`\`\`\n${keyListString}\n\`\`\``;
+          
+          await fetch(whData.resellerLogs.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              embeds: [{
+                title: "🛒 ดึงคีย์สำเร็จ (API)",
+                description: description,
+                color: 2331212, // success color
+                fields: [
+                  { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
+                  { name: "จำนวน", value: `${redeemedKeys.length} คีย์`, inline: true },
+                  { name: "เครดิตที่ใช้", value: `${unitCost * redeemedKeys.length}`, inline: true }
+                ],
+                timestamp: new Date().toISOString()
+              }]
+            })
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Webhook failed", e);
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      keys: redeemedKeys,
+      message: `Successfully pulled ${redeemedKeys.length} key(s)`,
+      remaining_balance: remainingBalance
+    });
+
+  } catch (error: any) {
+    console.error(error);
+    const msg = error.message || 'Internal server error';
+    const statusCode = msg.includes("Insufficient balance") || msg.includes("No keys") ? 400 : 500;
+    return res.status(statusCode).json({ status: 'error', message: msg });
+  }
+}

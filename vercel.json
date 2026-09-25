@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/proxy-genkey",
+      "destination": "https://nwtr.dev/meowt/api/genkey.php"
+    },
+    {
+      "source": "/(.*)",
+ฆฤฏฆ"
+      "destination": "/index.html"
+    }
+  ]
+}
