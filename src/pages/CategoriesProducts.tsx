@@ -827,36 +827,53 @@ export function CategoriesProducts() {
                 </div>
 
                 {/* Add new plan form */}
-                <div className="bg-[#0B0E14] p-3 rounded-xl border border-gray-800/80 flex flex-wrap sm:flex-nowrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={newPlanLabel}
-                    onChange={(e) => setNewPlanLabel(e.target.value)}
-                    placeholder="ชื่อแพ็กเกจ (เช่น 12ชั่วโมง, 1วัน)"
-                    className="flex-1 px-3 py-1.5 bg-[#12141F] border border-gray-800 rounded-lg text-xs text-white"
-                  />
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={newPlanDays}
-                    onChange={(e) => setNewPlanDays(e.target.value)}
-                    placeholder="จำนวนวัน"
-                    className="w-20 px-3 py-1.5 bg-[#12141F] border border-gray-800 rounded-lg text-xs text-white"
-                  />
-                  <input
-                    type="number"
-                    value={newPlanCost}
-                    onChange={(e) => setNewPlanCost(e.target.value)}
-                    placeholder="ราคา"
-                    className="w-24 px-3 py-1.5 bg-[#12141F] border border-gray-800 rounded-lg text-xs text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddPlanRow}
-                    className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shrink-0"
-                  >
-                    + เพิ่มตัวเลือก
-                  </button>
+                <div className="bg-[#0B0E14] p-3 rounded-xl border border-gray-800/80 space-y-2">
+                  <span className="text-[11px] font-bold text-gray-400 block">เพิ่มตัวเลือกแพ็กเกจวัน & ราคา:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                    <div className="sm:col-span-5">
+                      <label className="block text-[11px] text-gray-400 mb-1 font-semibold">ชื่อแพ็กเกจ (เช่น 12ชั่วโมง, 1วัน):</label>
+                      <input
+                        type="text"
+                        value={newPlanLabel}
+                        onChange={(e) => setNewPlanLabel(e.target.value)}
+                        placeholder="เช่น 12ชั่วโมง, 1วัน"
+                        className="w-full px-3 py-2 bg-[#12141F] border border-gray-800 rounded-lg text-xs text-white focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className="block text-[11px] text-gray-400 mb-1 font-semibold">จำนวน วัน/ชม. :</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={newPlanDays}
+                        onChange={(e) => setNewPlanDays(e.target.value)}
+                        placeholder="เช่น 1 หรือ 0.5"
+                        className="w-full px-3 py-2 bg-[#12141F] border border-gray-800 rounded-lg text-xs text-white focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] text-gray-400 mb-1 font-semibold">ราคา (เครดิต):</label>
+                      <input
+                        type="number"
+                        value={newPlanCost}
+                        onChange={(e) => setNewPlanCost(e.target.value)}
+                        placeholder="ราคา"
+                        className="w-full px-3 py-2 bg-[#12141F] border border-gray-800 rounded-lg text-xs text-white focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={handleAddPlanRow}
+                        className="w-full py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shrink-0 shadow-md"
+                      >
+                        + เพิ่มตัวเลือก
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 

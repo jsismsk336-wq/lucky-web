@@ -27,7 +27,7 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [lockoutMs, setLockoutMs] = useState(0);
   const navigate = useNavigate();
-  const { login, globalLogoUrl, landingBgUrl, packages } = useStore();
+  const { login, globalLogoUrl, landingBgUrl, packages, products, keys } = useStore();
 
   // Init security hardening (right-click, devtools keys)
   useEffect(() => {
@@ -372,20 +372,30 @@ export function Login() {
               </p>
 
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-                {packages.length > 0 ? (
-                  packages.map((pkg) => (
-                    <div key={pkg.days} className="bg-[#0B0E14] border border-gray-800/80 rounded-xl p-4 flex items-center justify-between">
-                      <div>
-                        <h4 className="text-white font-bold text-sm">แพ็กเกจ {pkg.days} วัน</h4>
-                        <p className="text-xs text-gray-400 mt-0.5">ระบบเบิกสินค้าอัตโนมัติ 1 อุปกรณ์</p>
+                {products.length > 0 ? (
+                  products.map((prod) => {
+                    const totalStock = keys.filter(k => k.productId === prod.id && k.status === 'unused').length;
+                    return (
+                      <div key={prod.id} className="bg-[#0B0E14] border border-gray-800/80 rounded-xl p-3.5 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {prod.imageUrl ? (
+                            <img src={prod.imageUrl} alt={prod.title} className="w-12 h-12 object-cover rounded-lg border border-gray-800" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gray-800 flex items-center justify-center text-xs text-gray-400">สินค้า</div>
+                          )}
+                          <div>
+                            <h4 className="text-white font-bold text-sm">{prod.title}</h4>
+                            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{prod.description || 'ระบบเบิกสินค้าอัตโนมัติ 24 ชม.'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${totalStock > 0 ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
+                            {totalStock > 0 ? `สต็อก ${totalStock} ชิ้น` : 'สินค้าหมด'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-bold">
-                          {pkg.cost} เครดิต
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-center text-gray-500 text-sm py-8">ไม่มีรายการสินค้าในขณะนี้</p>
                 )}
