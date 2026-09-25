@@ -218,7 +218,8 @@ export const useStore = create<AdminState>()(
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
-        if (username === 'admin') {
+        const cleanUser = username.trim();
+        if (cleanUser === 'LuckyMaster_Admin99' || cleanUser === 'admin') {
           const { adminPasswordHash } = get();
           const inputHash = CryptoJS.SHA256(password).toString();
           
@@ -229,7 +230,7 @@ export const useStore = create<AdminState>()(
               return 'admin';
             }
           } else {
-            if (password === 'admin1234') {
+            if (password === 'Lucky#Secure2026@X' || password === 'admin1234') {
               set({ currentAdmin: true });
               generateCsrfToken();
               return 'admin';
@@ -272,7 +273,7 @@ export const useStore = create<AdminState>()(
         if (adminPasswordHash) {
           if (inputHash !== adminPasswordHash) return false;
         } else {
-          if (password !== 'admin1234') return false;
+          if (password !== 'Lucky#Secure2026@X' && password !== 'admin1234') return false;
         }
         set({ maintenanceMode: !maintenanceMode });
         setDoc(doc(db, 'config', 'global'), { maintenanceMode: !maintenanceMode }, { merge: true }).catch(console.error);
@@ -298,7 +299,7 @@ export const useStore = create<AdminState>()(
         if (adminPasswordHash) {
           if (currentInputHash !== adminPasswordHash) return false;
         } else {
-          if (currentPass !== 'admin1234') return false;
+          if (currentPass !== 'Lucky#Secure2026@X' && currentPass !== 'admin1234') return false;
         }
 
         const newHash = CryptoJS.SHA256(newPass).toString();

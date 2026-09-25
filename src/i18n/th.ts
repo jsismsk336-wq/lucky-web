@@ -6,7 +6,7 @@ export const th = {
     settings: 'ตั้งค่าความปลอดภัย',
     resetRequests: 'คำขอรีเซ็ตคีย์',
     announcements: 'จัดการประกาศ',
-    adminTitle: 'BLUERET แอดมิน',
+    adminTitle: 'LUCKY แอดมิน',
     adminRole: 'ผู้ดูแลระบบหลัก'
   },
   layout: {

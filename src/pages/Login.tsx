@@ -107,7 +107,7 @@ export function Login() {
           <NeonLogo size="lg" />
         </div>
         
-        <h1 className="text-2xl font-bold tracking-wider text-white mb-1">BLUERET</h1>
+        <h1 className="text-2xl font-bold tracking-wider text-white mb-1">LUCKY</h1>
         <p className="text-xs text-gray-400 tracking-[0.2em] mb-8 font-medium">VOLUMETRIC GATEWAY</p>
         
         <div className="w-full flex items-center gap-4 mb-8">
