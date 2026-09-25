@@ -96,7 +96,7 @@ export function Login() {
   const lockSeconds = Math.ceil(lockoutMs / 1000);
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative px-4 overflow-hidden bg-black font-sans text-white">
+    <div className="min-h-screen flex flex-col justify-between items-center relative px-4 overflow-hidden bg-black font-sans text-white select-none">
       {/* Dynamic Background Image / Pitch Black Red Atmospheric Glow */}
       {landingBgUrl && (
         <div 
@@ -131,126 +131,129 @@ export function Login() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.98, filter: "blur(8px)" }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative z-10 mx-auto my-auto flex w-[min(980px,calc(100%-32px))] flex-col items-center pt-[clamp(60px,10vh,120px)] pb-16 text-center select-none"
+            className="relative z-10 flex-1 flex flex-col items-center justify-between w-full max-w-[980px] mx-auto pt-[clamp(40px,8vh,100px)] pb-4 text-center select-none"
           >
-            {/* Dynamic Logo (Connected to Admin Backend Settings) */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="mb-6 relative cursor-pointer group"
-              onClick={() => setShowLanding(false)}
-            >
-              {globalLogoUrl ? (
-                <div className="relative p-2">
-                  <div className="absolute inset-0 bg-red-600/30 rounded-2xl blur-xl group-hover:bg-red-600/50 transition-all duration-500" />
-                  <img 
-                    src={globalLogoUrl} 
-                    alt="LUCKY STORE Logo" 
-                    className="w-20 h-20 sm:w-24 sm:h-24 object-contain relative z-10 filter drop-shadow-[0_0_20px_rgba(230,0,0,0.8)] transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-              ) : (
-                <NeonLogo size="lg" />
-              )}
-            </motion.div>
-
-            {/* Red Live Pill Badge (Exact X2SQUAD Pill) */}
-            <motion.div 
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-              className="mb-6 inline-flex cursor-default items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 shadow-[0_0_15px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07]"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#e60000] opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#e60000] shadow-[0_0_10px_#e60000]"></span>
-              </span>
-              <p className="m-0 text-xs sm:text-sm font-medium tracking-[0.04em] text-white/70">
-                WELCOME TO <span className="font-semibold text-white">LUCKY STORE</span>
-              </p>
-            </motion.div>
-
-            {/* Hero Main Heading (Exact X2SQUAD Typography & Color) */}
-            <motion.h1 
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
-              className="text-3xl sm:text-5xl font-bold tracking-tight text-white drop-shadow-sm"
-            >
-              ยินดีต้อนรับสู่{' '}
-              <span 
-                style={{ backgroundImage: "linear-gradient(135deg, #e60000 0%, #ff4d4d 50%, #cc0000 100%)" }}
-                className="bg-clip-text text-transparent bg-gradient-to-r drop-shadow-[0_0_25px_rgba(230,0,0,0.45)]"
-              >
-                LUCKY STORE
-              </span>
-            </motion.h1>
-
-            {/* Subtitle / Description (Exact X2SQUAD Text Size & Color) */}
-            <motion.p 
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut", delay: 0.25 }}
-              className="mx-auto mt-4 max-w-[620px] text-sm sm:text-base font-normal leading-relaxed text-white/60 sm:mt-5"
-            >
-              LUCKY STORE — ร้านบริการจำหน่ายคีย์และสินค้าดิจิทัลอัตโนมัติ
-              <br className="hidden md:inline" />
-              ตอบโจทย์ทุกการใช้งาน ปลอดภัย ใช้งานง่าย ได้รับของทันที 24 ชั่วโมง
-            </motion.p>
-
-            {/* Feature Badges (Exact X2SQUAD Pill Buttons) */}
-            <motion.div 
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut", delay: 0.32 }}
-              className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-white/55 sm:gap-3"
-            >
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md">
-                <Zap className="size-3.5 text-[#e60000]" />
-                <span>ระบบอัตโนมัติ 24 ชม.</span>
-              </div>
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md">
-                <ShieldCheck className="size-3.5 text-[#e60000]" />
-                <span>ปลอดภัย มั่นใจได้ 100%</span>
-              </div>
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md">
-                <Sparkles className="size-3.5 text-[#e60000]" />
-                <span>บริการรวดเร็วทันใจ</span>
-              </div>
-            </motion.div>
-
-            {/* Action Buttons (Exact X2SQUAD Gradient & Border Style) */}
-            <motion.div 
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut", delay: 0.4 }}
-              className="mt-8 flex w-full flex-col items-center justify-center gap-3.5 sm:mt-9 sm:w-auto sm:flex-row"
-            >
-              <button
+            {/* Center Main Content Container */}
+            <div className="my-auto flex flex-col items-center w-full">
+              {/* Dynamic Logo (Connected to Admin Backend Settings) */}
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="mb-6 relative cursor-pointer group"
                 onClick={() => setShowLanding(false)}
-                style={{ background: "linear-gradient(135deg, #e60000 0%, #ff3333 100%)" }}
-                className="group relative inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl px-7 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(230,0,0,0.6)] active:scale-[0.98] sm:w-auto shadow-[0_0_30px_rgba(230,0,0,0.4)]"
               >
-                <span>เข้าสู่เว็บไซต์</span>
-                <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
-              </button>
+                {globalLogoUrl ? (
+                  <div className="relative p-2">
+                    <div className="absolute inset-0 bg-red-600/30 rounded-2xl blur-xl group-hover:bg-red-600/50 transition-all duration-500" />
+                    <img 
+                      src={globalLogoUrl} 
+                      alt="LUCKY STORE Logo" 
+                      className="w-20 h-20 sm:w-24 sm:h-24 object-contain relative z-10 filter drop-shadow-[0_0_20px_rgba(230,0,0,0.8)] transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                ) : (
+                  <NeonLogo size="lg" />
+                )}
+              </motion.div>
 
-              <button
-                onClick={() => setShowStockModal(true)}
-                className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-6 text-sm font-medium text-white/90 transition-all duration-200 hover:scale-[1.02] hover:border-white/30 hover:bg-white/[0.12] active:scale-[0.98] sm:w-auto"
+              {/* Red Live Pill Badge (Exact X2SQUAD Pill) */}
+              <motion.div 
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                className="mb-6 inline-flex cursor-default items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 shadow-[0_0_15px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07]"
               >
-                <ShoppingBag className="size-4 text-white/70" />
-                <span>ดูสินค้าทั้งหมด</span>
-              </button>
-            </motion.div>
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#e60000] opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#e60000] shadow-[0_0_10px_#e60000]"></span>
+                </span>
+                <p className="m-0 text-xs sm:text-sm font-medium tracking-[0.04em] text-white/70">
+                  WELCOME TO <span className="font-semibold text-white">LUCKY STORE</span>
+                </p>
+              </motion.div>
 
-            {/* Footer Text (Exact Position, Font Size & Opacity) */}
+              {/* Hero Main Heading (Exact X2SQUAD Typography & Color) */}
+              <motion.h1 
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
+                className="text-3xl sm:text-5xl font-bold tracking-tight text-white drop-shadow-sm"
+              >
+                ยินดีต้อนรับสู่{' '}
+                <span 
+                  style={{ backgroundImage: "linear-gradient(135deg, #e60000 0%, #ff4d4d 50%, #cc0000 100%)" }}
+                  className="bg-clip-text text-transparent bg-gradient-to-r drop-shadow-[0_0_25px_rgba(230,0,0,0.45)]"
+                >
+                  LUCKY STORE
+                </span>
+              </motion.h1>
+
+              {/* Subtitle / Description (Exact X2SQUAD Text Size & Color) */}
+              <motion.p 
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut", delay: 0.25 }}
+                className="mx-auto mt-4 max-w-[620px] text-sm sm:text-base font-normal leading-relaxed text-white/60 sm:mt-5"
+              >
+                LUCKY STORE — ร้านบริการจำหน่ายคีย์และสินค้าดิจิทัลอัตโนมัติ
+                <br className="hidden md:inline" />
+                ตอบโจทย์ทุกการใช้งาน ปลอดภัย ใช้งานง่าย ได้รับของทันที 24 ชั่วโมง
+              </motion.p>
+
+              {/* Feature Badges (Exact X2SQUAD Pill Buttons) */}
+              <motion.div 
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut", delay: 0.32 }}
+                className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-white/55 sm:gap-3"
+              >
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md">
+                  <Zap className="size-3.5 text-[#e60000]" />
+                  <span>ระบบอัตโนมัติ 24 ชม.</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md">
+                  <ShieldCheck className="size-3.5 text-[#e60000]" />
+                  <span>ปลอดภัย มั่นใจได้ 100%</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1 backdrop-blur-md">
+                  <Sparkles className="size-3.5 text-[#e60000]" />
+                  <span>บริการรวดเร็วทันใจ</span>
+                </div>
+              </motion.div>
+
+              {/* Action Buttons (Exact X2SQUAD Gradient & Border Style) */}
+              <motion.div 
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut", delay: 0.4 }}
+                className="mt-8 flex w-full flex-col items-center justify-center gap-3.5 sm:mt-9 sm:w-auto sm:flex-row"
+              >
+                <button
+                  onClick={() => setShowLanding(false)}
+                  style={{ background: "linear-gradient(135deg, #e60000 0%, #ff3333 100%)" }}
+                  className="group relative inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl px-7 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(230,0,0,0.6)] active:scale-[0.98] sm:w-auto shadow-[0_0_30px_rgba(230,0,0,0.4)]"
+                >
+                  <span>เข้าสู่เว็บไซต์</span>
+                  <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </button>
+
+                <button
+                  onClick={() => setShowStockModal(true)}
+                  className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-6 text-sm font-medium text-white/90 transition-all duration-200 hover:scale-[1.02] hover:border-white/30 hover:bg-white/[0.12] active:scale-[0.98] sm:w-auto"
+                >
+                  <ShoppingBag className="size-4 text-white/70" />
+                  <span>ดูสินค้าทั้งหมด</span>
+                </button>
+              </motion.div>
+            </div>
+
+            {/* Footer Text (Anchored naturally at bottom of the full screen height) */}
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs tracking-wide text-white/40 pointer-events-none whitespace-nowrap z-20"
+              className="mt-10 text-xs tracking-wide text-white/40 pointer-events-none whitespace-nowrap z-20 pb-2"
             >
               © 2026 LUCKY STORE — All rights reserved.
             </motion.p>
