@@ -97,15 +97,15 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative px-4 overflow-hidden bg-black font-sans text-white">
-      {/* Background with Dark DNA & Red Glow Particles */}
+      {/* Exact X2SQUAD Background Banner Image */}
       <div 
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-40 animate-slow-zoom filter grayscale contrast-125"
-        style={{ backgroundImage: `url(${dnaBg})` }}
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-30 mix-blend-luminosity scale-105 transition-all duration-1000"
+        style={{ backgroundImage: `url('https://th01.web2u.xyz/pic/uploads/20260917_035755_3d776747.png')` }}
       />
       
       {/* Red Glowing Orbs (X2SQUAD Style) */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-red-600/20 rounded-full blur-[140px] pointer-events-none z-0 animate-pulse duration-[5000ms]" />
-      <div className="absolute bottom-10 left-10 w-[300px] h-[300px] bg-red-800/10 rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-red-600/25 rounded-full blur-[160px] pointer-events-none z-0 animate-pulse duration-[4000ms]" />
+      <div className="absolute bottom-10 left-10 w-[350px] h-[350px] bg-red-800/15 rounded-full blur-[120px] pointer-events-none z-0" />
 
       {/* Grid Lines Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] z-0 pointer-events-none" />
@@ -165,10 +165,10 @@ export function Login() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-4xl md:text-6xl font-extrabold tracking-tight mb-3 text-white"
+              className="text-3xl md:text-5xl font-medium mb-4 text-white tracking-wide"
             >
-              ยินดีต้อนรับสู่{' '}
-              <span className="bg-gradient-to-r from-red-500 via-rose-500 to-red-600 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(230,0,0,0.7)]">
+              <span className="font-light text-gray-200">ยินดีต้อนรับสู่</span>{' '}
+              <span className="font-bold bg-gradient-to-r from-red-500 via-rose-500 to-red-600 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(230,0,0,0.7)]">
                 LUCKY STORE
               </span>
             </motion.h1>
@@ -178,7 +178,7 @@ export function Login() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-gray-400 text-sm md:text-base font-medium max-w-2xl leading-relaxed mb-8"
+              className="text-gray-300 text-xs md:text-sm font-light max-w-xl leading-relaxed mb-8 tracking-wide opacity-90"
             >
               LUCKY STORE — ร้านบริการจำหน่ายคีย์และสินค้าดิจิทัลอัตโนมัติ
               <br className="hidden md:inline" />
@@ -192,16 +192,16 @@ export function Login() {
               transition={{ delay: 0.5 }}
               className="flex flex-wrap items-center justify-center gap-3 mb-10"
             >
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#12141F]/80 border border-gray-800 text-xs font-medium text-gray-300 backdrop-blur-sm">
-                <Zap size={14} className="text-red-500" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#12141F]/80 border border-gray-800/80 text-xs font-light text-gray-300 backdrop-blur-sm">
+                <Zap size={13} className="text-red-500" />
                 <span>ระบบอัตโนมัติ 24 ชม.</span>
               </div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#12141F]/80 border border-gray-800 text-xs font-medium text-gray-300 backdrop-blur-sm">
-                <ShieldCheck size={14} className="text-red-500" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#12141F]/80 border border-gray-800/80 text-xs font-light text-gray-300 backdrop-blur-sm">
+                <ShieldCheck size={13} className="text-red-500" />
                 <span>ปลอดภัย มั่นใจได้ 100%</span>
               </div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#12141F]/80 border border-gray-800 text-xs font-medium text-gray-300 backdrop-blur-sm">
-                <Rocket size={14} className="text-red-500" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#12141F]/80 border border-gray-800/80 text-xs font-light text-gray-300 backdrop-blur-sm">
+                <Rocket size={13} className="text-red-500" />
                 <span>บริการรวดเร็วทันใจ</span>
               </div>
             </motion.div>
@@ -215,17 +215,17 @@ export function Login() {
             >
               <button
                 onClick={() => setShowLanding(false)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-sm transition-all duration-300 shadow-[0_0_25px_rgba(230,0,0,0.5)] hover:shadow-[0_0_35px_rgba(230,0,0,0.8)] active:scale-95 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-medium text-xs transition-all duration-300 shadow-[0_0_25px_rgba(230,0,0,0.5)] hover:shadow-[0_0_35px_rgba(230,0,0,0.8)] active:scale-95 cursor-pointer tracking-wider"
               >
                 <span>เข้าสู่เว็บไซต์</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={14} />
               </button>
 
               <button
                 onClick={() => setShowStockModal(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#12141F]/90 border border-gray-800 hover:border-gray-700 text-gray-300 hover:text-white font-medium text-sm transition-all duration-300 hover:bg-[#1A1D2B] cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#12141F]/90 border border-gray-800 hover:border-gray-700 text-gray-300 hover:text-white font-medium text-xs transition-all duration-300 hover:bg-[#1A1D2B] cursor-pointer tracking-wider"
               >
-                <ShoppingBag size={16} className="text-red-400" />
+                <ShoppingBag size={14} className="text-red-400" />
                 <span>ดูสินค้าทั้งหมด</span>
               </button>
             </motion.div>

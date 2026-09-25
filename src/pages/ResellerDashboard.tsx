@@ -234,7 +234,7 @@ export function ResellerDashboard() {
           <div className="inline-flex flex-wrap items-center gap-2 mb-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <span className="text-xs font-bold text-emerald-400">RZXHUB DIGITAL PORTAL · 24/7 AUTO SYSTEM</span>
+              <span className="text-xs font-bold text-emerald-400">LUCKY STORE · 24/7 AUTO SYSTEM</span>
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
               <span className="text-xs font-semibold text-blue-400">ส่งของอัตโนมัติทันที</span>
@@ -315,47 +315,47 @@ export function ResellerDashboard() {
               key={pkg.days}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`bg-gradient-to-b from-[#1A1D2A] to-[#12141D] rounded-3xl p-6 flex flex-col gap-4 transition-all duration-300 relative overflow-hidden group ${
-                available ? `border border-gray-700/50 hover:-translate-y-1 ${glowHoverClass}` : 'border border-gray-800/30 opacity-70'
+              className={`bg-[#0F121D]/90 backdrop-blur-md rounded-2xl p-5 flex flex-col gap-3.5 transition-all duration-300 relative overflow-hidden group border ${
+                available ? `border-white/10 hover:border-indigo-500/40 hover:-translate-y-1 ${glowHoverClass}` : 'border-white/5 opacity-60'
               }`}
             >
-              {available && <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
+              {available && <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>}
               
               <div className="flex justify-between items-start relative z-10">
                 <div>
-                  <div className={`font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${textGradient} text-2xl drop-shadow-sm tracking-normal`}>
+                  <div className={`font-semibold text-transparent bg-clip-text bg-gradient-to-r ${textGradient} text-xl tracking-wide`}>
                     {pkg.label}
                   </div>
-                  <div className={`text-xs mt-1.5 font-bold ${accentClass} inline-block px-2.5 py-1 rounded-md shadow-inner`}>
+                  <div className={`text-xs mt-1 font-medium ${accentClass} inline-block px-2.5 py-0.5 rounded-md`}>
                     {unitCost} {t('reseller.keyPerCredit')}
                   </div>
                 </div>
-                <div className={`text-xs px-2.5 py-1.5 rounded-xl font-bold shadow-sm ${
+                <div className={`text-[11px] px-2.5 py-1 rounded-md font-medium tracking-wide ${
                   stock > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
                 }`}>
                   {stock > 0 ? `${t('reseller.stock')} ${stock}` : t('reseller.outOfStock')}
                 </div>
               </div>
 
-              <div className="bg-[#0B0D14]/80 rounded-2xl p-4 border border-gray-800/50 mt-1 relative z-10">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="p-1.5 bg-gray-800/50 rounded-lg">
-                    <KeyRound size={14} className="text-gray-400" />
+              <div className="bg-[#090B12]/80 rounded-xl p-3.5 border border-white/5 mt-1 relative z-10">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="p-1 bg-white/5 rounded-md">
+                    <KeyRound size={13} className="text-gray-400" />
                   </div>
-                  <span className="text-xs text-gray-300 font-medium">{pkg.label}</span>
+                  <span className="text-xs text-gray-300 font-normal">{pkg.label}</span>
                 </div>
                 {/* Quantity picker */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">{t('reseller.quantity')}</span>
+                  <span className="text-xs text-gray-400 font-light">{t('reseller.quantity')}</span>
                   <QuantityPicker
                     value={qty}
                     onChange={(v) => setQty(pkg.days, v)}
                   />
                 </div>
                 {/* Total cost */}
-                <div className="mt-3 text-right">
-                  <span className={`text-[11px] font-bold px-2 py-1 rounded-md ${
-                    canAffordQty ? accentClass : 'bg-red-500/10 text-red-400 border border-red-500/10'
+                <div className="mt-2.5 text-right">
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${
+                    canAffordQty ? accentClass : 'bg-red-500/10 text-red-400 border border-red-500/20'
                   }`}>
                     {t('reseller.total', { cost: totalCost.toLocaleString() })}
                   </span>
@@ -365,7 +365,7 @@ export function ResellerDashboard() {
               <button
                 onClick={() => handleRedeem(pkg.days)}
                 disabled={!available || isGlobalLocked}
-                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all select-none relative z-10 ${
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-xs transition-all select-none relative z-10 tracking-wider ${
                   redeemingDays === pkg.days
                     ? 'bg-gray-800/50 text-white cursor-not-allowed animate-pulse border border-gray-700/30'
                     : available && !isGlobalLocked
