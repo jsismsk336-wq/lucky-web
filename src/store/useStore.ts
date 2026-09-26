@@ -201,7 +201,7 @@ interface AdminState {
 
   // Reseller action - requires CSRF token
   redeemKey: (durationDays: number, quantity: number, csrfToken: string) => Promise<LicenseKey[] | 'no_stock' | 'no_credit' | 'csrf_error' | 'locked' | 'partial'>;
-  purchaseProductKey: (productId: string, planId: string, csrfToken: string) => Promise<{ success: boolean; key?: LicenseKey; error?: string }>;
+  purchaseProductKey: (productId: string, planId: string, csrfToken: string, quantity?: number) => Promise<{ success: boolean; keys?: LicenseKey[]; key?: LicenseKey; error?: string }>;
 }
 
 const generateRandomString = (length: number) => {
@@ -1035,8 +1035,9 @@ export const useStore = create<AdminState>()(
         return newKeys.length;
       },
 
-      // Purchase Product Key
-      purchaseProductKey: async (productId: string, planId: string, csrfToken: string) => {
+      // Purchase Product Key (Support quantity 1 to 50 keys)
+      purchaseProductKey: async (productId: string, planId: string, csrfToken: string, quantity: number = 1) => {
+        const numToPull = Math.min(50, Math.max(1, Math.floor(quantity)));
         const { currentReseller, products, keys } = get();
         if (!currentReseller) return { success: false, error: 'กรุณาเข้าสู่ระบบก่อนดึงคีย์' };
         if (!validateCsrfToken(csrfToken)) return { success: false, error: 'CSRF Token ไม่ถูกต้อง' };
@@ -1049,75 +1050,111 @@ export const useStore = create<AdminState>()(
           const plan = product.plans.find(p => p.id === planId);
           if (!plan) return { success: false, error: 'ไม่พบแพ็กเกจสินค้านี้' };
 
-          if (currentReseller.balance < plan.cost) {
-            return { success: false, error: `ยอดเงินคงเหลือไม่เพียงพอ (ต้องการ ${plan.cost} เครดิต แต่คุณมี ${currentReseller.balance} เครดิต)` };
+          const totalCost = plan.cost * numToPull;
+
+          if (currentReseller.balance < totalCost) {
+            return { success: false, error: `ยอดเงินคงเหลือไม่เพียงพอ (ต้องการ ${totalCost} เครดิต แต่คุณมี ${currentReseller.balance} เครดิต)` };
           }
 
-          // Search for 1 unused key matching productId and planId
-          let targetKey = keys.find(k => k.productId === productId && k.planId === planId && k.status === 'unused');
+          // Search for unused matching keys from local store first
+          let matchingKeys = keys.filter(k => 
+            k.status === 'unused' && (
+              (k.productId === productId && k.planId === planId) ||
+              (k.productId === productId && k.durationDays === plan.days) ||
+              (!k.productId && k.durationDays === plan.days)
+            )
+          );
 
-          if (!targetKey) {
+          // If local state doesn't have enough, fetch directly from Firestore collection
+          if (matchingKeys.length < numToPull) {
             const q = query(
               collection(db, 'keys'),
-              where('productId', '==', productId),
-              where('planId', '==', planId),
               where('status', '==', 'unused'),
-              limit(1)
+              limit(100)
             );
             const querySnap = await getDocs(q);
-            if (!querySnap.empty) {
-              targetKey = querySnap.docs[0].data() as LicenseKey;
-            }
+            const fetchedKeys = querySnap.docs.map(doc => doc.data() as LicenseKey);
+            
+            const filtered = fetchedKeys.filter(k => 
+              k.status === 'unused' && (
+                (k.productId === productId && k.planId === planId) ||
+                (k.productId === productId && k.durationDays === plan.days) ||
+                (!k.productId && k.durationDays === plan.days)
+              )
+            );
+            
+            const map = new Map<string, LicenseKey>();
+            matchingKeys.forEach(k => map.set(k.id, k));
+            filtered.forEach(k => map.set(k.id, k));
+            matchingKeys = Array.from(map.values());
           }
 
-          if (!targetKey) {
-            return { success: false, error: 'ขออภัย สินค้าแพ็กเกจนี้หมดสต็อกแล้ว' };
+          const targetKeys = matchingKeys.slice(0, numToPull);
+
+          if (targetKeys.length < numToPull) {
+            return { 
+              success: false, 
+              error: targetKeys.length === 0 
+                ? 'ขออภัย สินค้าแพ็กเกจนี้หมดสต็อกแล้ว' 
+                : `ขออภัย สต็อกสินค้าคงเหลือเพียง ${targetKeys.length} คีย์ (คุณต้องการ ${numToPull} คีย์)` 
+            };
           }
 
           const now = Date.now();
-          const newBalance = currentReseller.balance - plan.cost;
+          const newBalance = currentReseller.balance - totalCost;
 
           const batch = writeBatch(db);
           batch.update(doc(db, 'partners', currentReseller.id), { balance: newBalance });
-          batch.update(doc(db, 'keys', targetKey.id), {
+
+          const redeemedKeys: LicenseKey[] = targetKeys.map(k => ({
+            ...k,
             status: 'active',
             redeemedBy: currentReseller.id,
             redeemedAt: now,
             durationDays: plan.days,
+            productId,
+            planId,
+          }));
+
+          redeemedKeys.forEach(k => {
+            batch.update(doc(db, 'keys', k.id), {
+              status: 'active',
+              redeemedBy: currentReseller.id,
+              redeemedAt: now,
+              durationDays: plan.days,
+              productId,
+              planId,
+            });
           });
+
           batch.update(doc(db, 'products', productId), {
-            soldCount: (product.soldCount || 0) + 1,
+            soldCount: (product.soldCount || 0) + numToPull,
           });
 
           await batch.commit();
 
-          const redeemedKey: LicenseKey = {
-            ...targetKey,
-            status: 'active',
-            redeemedBy: currentReseller.id,
-            redeemedAt: now,
-            durationDays: plan.days,
-          };
-
+          const targetKeyIds = new Set(targetKeys.map(k => k.id));
           set(state => ({
             currentReseller: state.currentReseller ? { ...state.currentReseller, balance: newBalance } : null,
             partners: state.partners.map(p => p.id === currentReseller.id ? { ...p, balance: newBalance } : p),
-            products: state.products.map(p => p.id === productId ? { ...p, soldCount: (p.soldCount || 0) + 1 } : p),
-            keys: state.keys.map(k => k.id === targetKey.id ? redeemedKey : k),
+            products: state.products.map(p => p.id === productId ? { ...p, soldCount: (p.soldCount || 0) + numToPull } : p),
+            keys: state.keys.map(k => targetKeyIds.has(k.id) ? { ...k, status: 'active', redeemedBy: currentReseller.id, redeemedAt: now, durationDays: plan.days, productId, planId } : k),
           }));
 
           const { webhooks } = get();
           if (webhooks?.resellerLogs?.enabled && webhooks?.resellerLogs?.url) {
+            const keyListStr = redeemedKeys.map(k => k.keyString).join('\n');
             sendDiscordLog(webhooks.resellerLogs.url, {
               embeds: [{
-                title: "🛒 สั่งซื้อสินค้าสำเร็จ",
-                description: `ตัวแทน **${currentReseller.username}** ได้ดึงคีย์ **${product.title}** (${plan.label})`,
+                title: "🛒 สั่งซื้อสินค้าสำเร็จ (ดึงคีย์)",
+                description: `ตัวแทน **${currentReseller.username}** ได้ดึงคีย์ **${product.title}** (${plan.label}) จำนวน **${numToPull} คีย์**`,
                 color: COLORS.SUCCESS,
                 fields: [
                   { name: "สินค้า", value: product.title, inline: true },
                   { name: "แพ็กเกจ", value: plan.label, inline: true },
-                  { name: "ราคาที่จ่าย", value: `${plan.cost} เครดิต`, inline: true },
-                  { name: "คีย์ที่ได้รับ", value: `\`\`\`\n${redeemedKey.keyString}\n\`\`\``, inline: false },
+                  { name: "จำนวน", value: `${numToPull} คีย์`, inline: true },
+                  { name: "ราคารวมที่จ่าย", value: `${totalCost} เครดิต`, inline: true },
+                  { name: "รายการคีย์ที่ได้รับ", value: `\`\`\`\n${keyListStr.slice(0, 1000)}\n\`\`\``, inline: false },
                 ],
                 timestamp: new Date().toISOString()
               }]
@@ -1125,7 +1162,7 @@ export const useStore = create<AdminState>()(
           }
 
           generateCsrfToken();
-          return { success: true, key: redeemedKey };
+          return { success: true, keys: redeemedKeys, key: redeemedKeys[0] };
         } catch (err: any) {
           console.error("purchaseProductKey Error:", err);
           return { success: false, error: err?.message || 'เกิดข้อผิดพลาดในการดึงคีย์' };
