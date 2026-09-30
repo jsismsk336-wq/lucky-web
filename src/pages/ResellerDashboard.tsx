@@ -167,6 +167,7 @@ export function ResellerDashboard() {
 
   // Helper: calculate total stock count across all plans for a product
   const getProductTotalStock = (product: Product) => {
+    if (product.isAutoStock || Boolean(product.customPullUrl)) return 999;
     if (!product.plans || product.plans.length === 0) return 0;
     return keys.filter(k => {
       if (k.status !== 'unused') return false;
@@ -179,7 +180,11 @@ export function ResellerDashboard() {
   };
 
   // Helper: calculate stock for a specific plan
-  const getPlanStock = (productId: string, planId: string, durationDays: number) => {
+  const getPlanStock = (productId: string, planId: string, durationDays: number, plan?: ProductPlan) => {
+    const product = products.find(p => p.id === productId);
+    if (product?.isAutoStock || Boolean(product?.customPullUrl) || plan?.isAutoStock) {
+      return 999;
+    }
     return keys.filter(k => {
       if (k.status !== 'unused') return false;
       if (k.productId && k.planId) {
@@ -455,9 +460,10 @@ export function ResellerDashboard() {
 
                 <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
                   {selectedProduct.plans.map((plan) => {
-                    const planStock = getPlanStock(selectedProduct.id, plan.id, plan.days);
+                    const isAuto = selectedProduct.isAutoStock || Boolean(selectedProduct.customPullUrl) || plan.isAutoStock;
+                    const planStock = getPlanStock(selectedProduct.id, plan.id, plan.days, plan);
                     const isSelected = selectedPlanId === plan.id;
-                    const isOutOfStock = planStock <= 0;
+                    const isOutOfStock = !isAuto && planStock <= 0;
 
                     return (
                       <button
@@ -475,8 +481,8 @@ export function ResellerDashboard() {
                       >
                         <div>
                           <div className="text-xs font-bold text-white mb-0.5">{plan.label}</div>
-                          <div className={`text-[10px] font-medium ${isOutOfStock ? 'text-red-400' : 'text-emerald-400'}`}>
-                            {isOutOfStock ? 'สินค้าหมด' : `สต็อกคงเหลือ ${planStock} คีย์`}
+                          <div className={`text-[10px] font-medium ${isOutOfStock ? 'text-red-400' : isAuto ? 'text-emerald-400 font-bold' : 'text-emerald-400'}`}>
+                            {isOutOfStock ? 'สินค้าหมด' : isAuto ? '🟢 สต็อกอัตโนมัติ (พร้อมเบิก)' : `สต็อกคงเหลือ ${planStock} คีย์`}
                           </div>
                         </div>
 
