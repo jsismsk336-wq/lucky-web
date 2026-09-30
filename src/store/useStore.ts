@@ -65,6 +65,9 @@ export interface Product {
   customPullUrl?: string;
   customPullToken?: string;
   customTargetId?: string;
+
+  // Disabled toggle status
+  isDisabled?: boolean;
 }
 
 export interface Partner {
@@ -218,6 +221,7 @@ interface AdminState {
   // Product management (admin)
   addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'soldCount'>) => void;
   updateProduct: (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => void;
+  toggleProductDisabled: (id: string) => void;
   deleteProduct: (id: string) => void;
   addKeysToProductPlan: (productId: string, planId: string, durationDays: number, keyStrings: string[], creator: string) => Promise<number>;
 
@@ -1113,6 +1117,16 @@ export const useStore = create<AdminState>()(
           products: state.products.map(p => p.id === id ? { ...p, ...productData } : p)
         }));
         updateDoc(doc(db, 'products', id), productData).catch(err => console.error("updateProduct error:", err));
+      },
+
+      toggleProductDisabled: (id: string) => {
+        const prod = get().products.find(p => p.id === id);
+        if (!prod) return;
+        const newDisabled = !prod.isDisabled;
+        set(state => ({
+          products: state.products.map(p => p.id === id ? { ...p, isDisabled: newDisabled } : p)
+        }));
+        updateDoc(doc(db, 'products', id), { isDisabled: newDisabled }).catch(err => console.error("toggleProductDisabled error:", err));
       },
 
       deleteProduct: (id: string) => {

@@ -157,8 +157,9 @@ export function ResellerDashboard() {
     }
   }, [products]);
 
-  // Filter products by search query and category
+  // Filter products by search query and category (and exclude disabled products)
   const filteredProducts = products.filter(p => {
+    if (p.isDisabled) return false;
     const matchesCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.description?.toLowerCase().includes(searchQuery.toLowerCase());

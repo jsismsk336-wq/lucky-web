@@ -15,7 +15,8 @@ import {
   Layers, 
   Image as ImageIcon,
   Tag,
-  AlertCircle
+  AlertCircle,
+  Power
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -29,6 +30,7 @@ export function CategoriesProducts() {
     deleteCategory, 
     addProduct, 
     updateProduct, 
+    toggleProductDisabled,
     deleteProduct, 
     addKeysToProductPlan 
   } = useStore();
@@ -48,6 +50,7 @@ export function CategoriesProducts() {
   const [productImageUrl, setProductImageUrl] = useState('');
   const [productCategoryId, setProductCategoryId] = useState('');
   const [productIsPopular, setProductIsPopular] = useState(false);
+  const [productIsDisabled, setProductIsDisabled] = useState(false);
   const [productIsAutoStock, setProductIsAutoStock] = useState(false);
   const [productCustomPullUrl, setProductCustomPullUrl] = useState('');
   const [productCustomPullToken, setProductCustomPullToken] = useState('');
@@ -178,6 +181,7 @@ export function CategoriesProducts() {
       setProductImageUrl(prod.imageUrl);
       setProductCategoryId(prod.categoryId);
       setProductIsPopular(prod.isPopular || false);
+      setProductIsDisabled(prod.isDisabled || false);
       setProductPlans(prod.plans || []);
       setProductIsAutoStock(prod.isAutoStock || false);
       setProductCustomPullUrl(prod.customPullUrl || '');
@@ -190,6 +194,7 @@ export function CategoriesProducts() {
       setProductImageUrl('');
       setProductCategoryId(categories[0]?.id || '');
       setProductIsPopular(false);
+      setProductIsDisabled(false);
       setProductIsAutoStock(false);
       setProductCustomPullUrl('');
       setProductCustomPullToken('');
@@ -235,6 +240,7 @@ export function CategoriesProducts() {
         imageUrl: productImageUrl.trim(),
         categoryId: productCategoryId,
         isPopular: productIsPopular,
+        isDisabled: productIsDisabled,
         plans: productPlans,
         isAutoStock: productIsAutoStock,
         customPullUrl: productCustomPullUrl.trim(),
@@ -249,6 +255,7 @@ export function CategoriesProducts() {
         imageUrl: productImageUrl.trim(),
         categoryId: productCategoryId,
         isPopular: productIsPopular,
+        isDisabled: productIsDisabled,
         plans: productPlans,
         isAutoStock: productIsAutoStock,
         customPullUrl: productCustomPullUrl.trim(),
@@ -408,12 +415,17 @@ export function CategoriesProducts() {
                             ไม่มีรูปภาพ
                           </div>
                         )}
-                        {prod.isPopular && (
+                        {prod.isDisabled ? (
+                          <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-red-950/90 border border-red-500/60 text-red-400 text-[10px] font-bold flex items-center gap-1 shadow-lg">
+                            <Power size={12} />
+                            ปิดใช้งานอยู่
+                          </span>
+                        ) : prod.isPopular ? (
                           <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center gap-1 shadow-lg">
                             <Flame size={12} />
                             ยอดฮิต
                           </span>
-                        )}
+                        ) : null}
                         <span className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-gray-700 text-gray-300 text-[10px] font-semibold">
                           {category?.name || 'ไม่มีหมวดหมู่'}
                         </span>
@@ -467,8 +479,24 @@ export function CategoriesProducts() {
                         </button>
 
                         <button
+                          onClick={() => {
+                            toggleProductDisabled(prod.id);
+                            toast.success(prod.isDisabled ? `เปิดใช้งานสินค้า "${prod.title}" แล้ว` : `ปิดใช้งานสินค้า "${prod.title}" แล้ว`);
+                          }}
+                          title={prod.isDisabled ? "คลิกเพื่อเปิดใช้งานสินค้า" : "คลิกเพื่อปิดใช้งานสินค้า"}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            prod.isDisabled
+                              ? 'text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 border border-red-500/40'
+                              : 'text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40'
+                          }`}
+                        >
+                          <Power size={14} />
+                        </button>
+
+                        <button
                           onClick={() => handleOpenProductModal(prod)}
                           className="p-1.5 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+                          title="แก้ไขสินค้า"
                         >
                           <Edit size={14} />
                         </button>
@@ -476,6 +504,7 @@ export function CategoriesProducts() {
                         <button
                           onClick={() => handleDeleteProduct(prod)}
                           className="p-1.5 text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/50 rounded-lg transition-colors cursor-pointer"
+                          title="ลบสินค้า"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -807,17 +836,32 @@ export function CategoriesProducts() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="popularCheck"
-                  checked={productIsPopular}
-                  onChange={(e) => setProductIsPopular(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-800 bg-[#0B0E14] text-red-600 focus:ring-red-500"
-                />
-                <label htmlFor="popularCheck" className="text-xs text-gray-300 font-semibold cursor-pointer">
-                  ติดป้าย "ยอดฮิต 🔥" ที่หน้าสินค้า
-                </label>
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="popularCheck"
+                    checked={productIsPopular}
+                    onChange={(e) => setProductIsPopular(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-800 bg-[#0B0E14] text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="popularCheck" className="text-xs text-gray-300 font-semibold cursor-pointer">
+                    ติดป้าย "ยอดฮิต 🔥" ที่หน้าสินค้า
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="disabledCheck"
+                    checked={productIsDisabled}
+                    onChange={(e) => setProductIsDisabled(e.target.checked)}
+                    className="w-4 h-4 rounded border-red-800 bg-[#0B0E14] text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="disabledCheck" className="text-xs text-red-400 font-bold cursor-pointer">
+                    🚫 ปิดใช้งานสินค้าชั่วคราว (ซ่อนจากหน้าตัวแทน)
+                  </label>
+                </div>
               </div>
 
               {/* Dynamic Duration Plans Builder */}

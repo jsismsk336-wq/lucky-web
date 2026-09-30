@@ -77,8 +77,8 @@ export async function redeemTrueMoneyVoucher(
   // Modern CORS proxies list for client-side web apps
   const proxies = [
     (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url: string) => `https://proxy.cors.sh/${url}`,
+    (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
   ];
 
   const attempts: (() => Promise<Response>)[] = [
@@ -86,7 +86,7 @@ export async function redeemTrueMoneyVoucher(
     ...proxies.map(p => () => fetch(p(targetUrl), requestOptions)),
   ];
 
-  let lastErrorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ TrueMoney';
+  let lastErrorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ TrueMoney (การเชื่อมต่อถูกบล็อก หรือ ลิงก์ซองหมดอายุ)';
 
   for (const attempt of attempts) {
     try {
@@ -121,25 +121,25 @@ export async function redeemTrueMoneyVoucher(
 
           switch (code) {
             case 'VOUCHER_OUT_OF_STOCK':
-              message = 'ซองอั่งเปานี้ถูกใช้งานไปหมดแล้ว';
+              message = 'ซองอั่งเปานี้ถูกใช้งานไปหมดแล้ว หรือมีคนรับไปแล้ว';
               break;
             case 'VOUCHER_NOT_FOUND':
-              message = 'ไม่พบรหัสซองอั่งเปานี้ในระบบ TrueMoney';
+              message = 'ไม่พบรหัสซองอั่งเปานี้ในระบบ TrueMoney (กรุณาตรวจสอบลิงก์อีกครั้ง)';
               break;
             case 'VOUCHER_EXPIRED':
               message = 'ซองอั่งเปานี้หมดอายุแล้ว';
               break;
             case 'TARGET_USER_NOT_FOUND':
-              message = 'เบอร์รับเงินไม่ถูกต้อง หรือเบอร์ที่ตั้งไว้ในแอดมินไม่ได้ลงทะเบียน TrueMoney Wallet';
+              message = 'เบอร์รับเงินที่ตั้งไว้ในแอดมินยังไม่ได้ลงทะเบียน TrueMoney Wallet';
               break;
             case 'CANNOT_GET_OWN_VOUCHER':
-              message = 'เบอร์คนสร้างซองกับเบอร์รับเงินเป็นเบอร์เดียวกัน (ไม่สามารถรับซองของตนเองได้)';
+              message = 'เบอร์คนสร้างซองกับเบอร์รับเงินเป็นเบอร์เดียวกัน (ไม่สามารถรับซองของตัวเองได้)';
               break;
             default:
               if (data.status?.message) {
                 message = `[TrueMoney] ${data.status.message}`;
               } else if (code) {
-                message = `[TrueMoney Error] ${code}`;
+                message = `[TrueMoney] รหัสข้อผิดพลาด: ${code}`;
               }
           }
 
