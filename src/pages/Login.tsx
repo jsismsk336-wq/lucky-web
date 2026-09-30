@@ -96,7 +96,7 @@ export function Login() {
   const lockSeconds = Math.ceil(lockoutMs / 1000);
 
   return (
-    <div className="min-h-screen flex flex-col justify-between items-center relative px-4 overflow-hidden bg-black font-sans text-white select-none">
+    <div className="min-h-screen flex flex-col justify-between items-center relative px-3 sm:px-4 overflow-hidden bg-[#0c0c0d] font-sans text-white select-none">
       {/* Dynamic Background Image / Pitch Black Red Atmospheric Glow */}
       {landingBgUrl && (
         <div 
@@ -278,7 +278,7 @@ export function Login() {
               <span>ย้อนกลับหน้าแรก</span>
             </button>
 
-            <GlassCard className="w-full p-8 md:p-10 flex flex-col items-center border-red-500/10 bg-[#0B0E14]/80 backdrop-blur-xl shadow-[0_0_50px_rgba(230,0,0,0.15)]">
+            <GlassCard className="w-full p-5 sm:p-8 flex flex-col items-center border-white/12 bg-[#101012] backdrop-blur-xl shadow-2xl rounded-2xl sm:rounded-3xl">
               {/* Dynamic Logo inside Login Card */}
               <div className="mb-4 relative">
                 {globalLogoUrl ? (
@@ -347,12 +347,12 @@ export function Login() {
       {/* Stock Preview Modal */}
       <AnimatePresence>
         {showStockModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-[#12141F] border border-gray-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative"
+              className="bg-[#101012] border border-white/12 rounded-2xl p-4 sm:p-6 w-[95%] sm:w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar text-white"
             >
               <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
                 <div className="flex items-center gap-2 text-white font-bold text-lg">

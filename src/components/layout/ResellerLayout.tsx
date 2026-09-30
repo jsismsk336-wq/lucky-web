@@ -153,27 +153,27 @@ export function ResellerLayout() {
       {/* Main content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0B0E14] border-b border-gray-800/60 sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8">
+        <header className="md:hidden flex items-center justify-between px-3.5 py-2.5 bg-[#0c0c0d]/90 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7">
               <NeonLogo className="w-full h-full" />
             </div>
-            <span className="font-bold text-white tracking-wider text-sm">
+            <span className="font-bold text-white tracking-wider text-xs sm:text-sm">
               {partner?.username ?? 'Reseller'}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-primary font-bold">{partner?.balance.toLocaleString()} cr</span>
+            <span className="text-xs text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">{partner?.balance.toLocaleString()} cr</span>
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-xl bg-[#161925] border border-gray-800/60 text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-lg bg-[#101012] border border-white/10 text-gray-300 hover:text-white transition-colors"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-10 max-w-[1400px] w-full mx-auto">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto space-y-4 sm:space-y-6">
           <Outlet />
         </main>
       </div>

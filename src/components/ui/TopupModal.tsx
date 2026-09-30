@@ -72,36 +72,36 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="relative w-full max-w-md bg-[#0F1015] border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(168,85,247,0.2)] overflow-hidden text-white"
+        className="relative w-[95%] sm:w-full max-w-md max-h-[90vh] bg-[#101012] border border-white/12 rounded-2xl sm:rounded-3xl shadow-2xl overflow-y-auto custom-scrollbar text-white"
       >
         {/* Modal Header */}
-        <div className="p-6 pb-4 border-b border-gray-800/60 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.3)]">
-              <Gift size={22} />
+        <div className="p-4 sm:p-5 pb-3 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.3)]">
+              <Gift size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white flex items-center gap-1.5">
-                เติมพอยท์ <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400">ซองของขวัญ TrueMoney</span>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5">
+                เติมพอยท์ <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400">TrueMoney</span>
               </h3>
-              <p className="text-[11px] text-gray-400 font-medium">อัตราเติม: 1 บาท = 1 พอยท์ (พอยท์เข้าทันที 24 ชม.)</p>
+              <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium">อัตราเติม: 1 บาท = 1 พอยท์ (พอยท์เข้าทันที 24 ชม.)</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-lg transition-colors"
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-5 space-y-3.5">
           {successInfo ? (
             <div className="py-6 text-center space-y-4">
               <motion.div

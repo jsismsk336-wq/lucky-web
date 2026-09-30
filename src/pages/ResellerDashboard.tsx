@@ -52,7 +52,7 @@ function KeyResultModal({ keysData, productName, planLabel, onClose }: { keysDat
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="relative w-full max-w-xl bg-[#101012] border border-white/12 rounded-2xl p-6 shadow-2xl space-y-5 text-white overflow-hidden"
+          className="relative w-[95%] sm:w-full max-w-xl max-h-[90vh] bg-[#101012] border border-white/12 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-white overflow-y-auto custom-scrollbar"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -305,10 +305,10 @@ export function ResellerDashboard() {
         </div>
 
         {/* Category Pills Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               selectedCategory === 'all'
                 ? 'bg-[#0091ff] text-white shadow-[0_0_15px_rgba(0,145,255,0.3)]'
                 : 'bg-[#16181b] text-gray-400 border border-white/10 hover:text-white hover:border-white/20'
@@ -325,7 +325,7 @@ export function ResellerDashboard() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   isSelected
                     ? 'bg-[#0091ff] text-white shadow-[0_0_15px_rgba(0,145,255,0.3)]'
                     : 'bg-[#16181b] text-gray-400 border border-white/10 hover:text-white hover:border-white/20'

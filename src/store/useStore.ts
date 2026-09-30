@@ -46,6 +46,7 @@ export interface ProductPlan {
   days: number;
   label: string;
   cost: number;
+  isAutoStock?: boolean;
 }
 
 export interface Product {
@@ -143,10 +144,13 @@ interface AdminState {
   currentReseller: Partner | null;
   maintenanceMode: boolean;
   truemoneyPhone: string | null;
+  customPullUrl: string | null;
+  customPullToken: string | null;
 
-  // Top-up
+  // Top-up & Custom Pull API
   topupPartnerBalance: (id: string, amountToAdd: number, voucherRef?: string) => void;
   updateTruemoneyPhone: (phone: string) => void;
+  updateCustomPullApi: (baseUrl: string, token: string) => void;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
@@ -268,6 +272,8 @@ export const useStore = create<AdminState>()(
       currentReseller: null,
       maintenanceMode: false,
       truemoneyPhone: null,
+      customPullUrl: null,
+      customPullToken: null,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
@@ -479,6 +485,11 @@ export const useStore = create<AdminState>()(
       updateTruemoneyPhone: (phone) => {
         set({ truemoneyPhone: phone });
         setDoc(doc(db, 'config', 'global'), { truemoneyPhone: phone }, { merge: true }).catch(console.error);
+      },
+
+      updateCustomPullApi: (baseUrl, token) => {
+        set({ customPullUrl: baseUrl, customPullToken: token });
+        setDoc(doc(db, 'config', 'global'), { customPullUrl: baseUrl, customPullToken: token }, { merge: true }).catch(console.error);
       },
 
       updatePartnerPassword: (id, newPassword) => {
@@ -1145,6 +1156,111 @@ export const useStore = create<AdminState>()(
 
           const targetKeys = matchingKeys.slice(0, numToPull);
 
+          // If local stock is insufficient or if plan is set to isAutoStock, try Custom Pull API (GET /API/PULL)
+          const pullBaseUrl = get().customPullUrl || get().apiEndpoint;
+          const pullToken = get().customPullToken || get().apiToken;
+
+          if ((plan.isAutoStock || targetKeys.length < numToPull) && pullBaseUrl && pullToken) {
+            let targetUrl = pullBaseUrl.trim();
+            if (!targetUrl.includes('/api/pull') && !targetUrl.endsWith('.php')) {
+              targetUrl = targetUrl.replace(/\/+$/, '') + '/api/pull';
+            }
+
+            const queryParams = new URLSearchParams({
+              token: pullToken.trim(),
+              days: plan.days.toString(),
+              qty: numToPull.toString(),
+              productId: productId,
+            });
+
+            const fullUrl = `${targetUrl}?${queryParams.toString()}`;
+
+            const proxies = [
+              (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+              (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            ];
+
+            const attempts = [
+              () => fetch(fullUrl, { headers: { 'Authorization': `Bearer ${pullToken}` } }),
+              ...proxies.map(makeProxy => () => fetch(makeProxy(fullUrl), { headers: { 'Authorization': `Bearer ${pullToken}` } })),
+            ];
+
+            let pulledKeyStrings: string[] = [];
+            let apiErrorMessage = '';
+
+            for (const attempt of attempts) {
+              try {
+                const res = await attempt();
+                const text = await res.text();
+                let data: any;
+                try { data = JSON.parse(text); } catch (e) { continue; }
+
+                if (data) {
+                  let extracted: string[] = [];
+                  if (Array.isArray(data.keys)) {
+                    extracted = data.keys.map((k: any) => typeof k === 'string' ? k : k.key || k.keyString || k.code);
+                  } else if (data.key || data.code || data.license_key || data.keyString) {
+                    extracted = [data.key || data.code || data.license_key || data.keyString];
+                  } else if (data.data?.key || data.data?.keys) {
+                    const d = data.data;
+                    extracted = Array.isArray(d.keys) ? d.keys : [d.key];
+                  } else if (Array.isArray(data)) {
+                    extracted = data.map((k: any) => typeof k === 'string' ? k : k.key || k.code);
+                  }
+
+                  extracted = extracted.filter(k => Boolean(k) && typeof k === 'string');
+
+                  if (extracted.length > 0) {
+                    pulledKeyStrings = extracted;
+                    break;
+                  } else if (data.message || data.error) {
+                    apiErrorMessage = data.message || data.error;
+                  }
+                }
+              } catch (err: any) {
+                console.warn("API pull attempt error:", err);
+              }
+            }
+
+            if (pulledKeyStrings.length > 0) {
+              const now = Date.now();
+              const newBalance = currentReseller.balance - totalCost;
+
+              const apiKeys: LicenseKey[] = pulledKeyStrings.slice(0, numToPull).map((keyStr, idx) => ({
+                id: 'k_api_' + now + '_' + idx + '_' + Math.random().toString(36).substring(2, 6),
+                keyString: keyStr.trim(),
+                durationDays: plan.days,
+                createdAt: now,
+                status: 'active',
+                hwid: null,
+                createdBy: 'CUSTOM_PULL_API',
+                redeemedBy: currentReseller.id,
+                redeemedAt: now,
+                productId,
+                planId,
+              }));
+
+              const batch = writeBatch(db);
+              batch.update(doc(db, 'partners', currentReseller.id), { balance: newBalance });
+              apiKeys.forEach(k => batch.set(doc(db, 'keys', k.id), k));
+              batch.update(doc(db, 'products', productId), {
+                soldCount: (product.soldCount || 0) + apiKeys.length,
+              });
+              await batch.commit();
+
+              set(state => ({
+                currentReseller: state.currentReseller ? { ...state.currentReseller, balance: newBalance } : null,
+                partners: state.partners.map(p => p.id === currentReseller.id ? { ...p, balance: newBalance } : p),
+                products: state.products.map(p => p.id === productId ? { ...p, soldCount: (p.soldCount || 0) + apiKeys.length } : p),
+                keys: [...state.keys, ...apiKeys],
+              }));
+
+              return { success: true, keys: apiKeys, key: apiKeys[0] };
+            } else if (plan.isAutoStock) {
+              return { success: false, error: '[API ต้นทาง] ' + (apiErrorMessage || 'ไม่สามารถดึงคีย์จากระบบต้นทางได้ กรุณาตรวจสอบการเชื่อมต่อ API') };
+            }
+          }
+
           if (targetKeys.length < numToPull) {
             return { 
               success: false, 
@@ -1335,7 +1451,9 @@ export async function initFirebaseSync() {
         apiToken: data.apiToken || "",
         adminPasswordHash: data.adminPasswordHash || null,
         maintenanceMode: data.maintenanceMode || false,
-        truemoneyPhone: data.truemoneyPhone || null
+        truemoneyPhone: data.truemoneyPhone || null,
+        customPullUrl: data.customPullUrl || null,
+        customPullToken: data.customPullToken || null
       });
     }
   });

@@ -12,10 +12,12 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword, truemoneyPhone, updateTruemoneyPhone } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword, truemoneyPhone, updateTruemoneyPhone, customPullUrl, customPullToken, updateCustomPullApi } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
   const [localLandingBg, setLocalLandingBg] = useState<string>(landingBgUrl || '');
   const [localTruemoneyPhone, setLocalTruemoneyPhone] = useState<string>(truemoneyPhone || '');
+  const [localCustomPullUrl, setLocalCustomPullUrl] = useState<string>(customPullUrl || '');
+  const [localCustomPullToken, setLocalCustomPullToken] = useState<string>(customPullToken || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localApiEndpoint, setLocalApiEndpoint] = useState(apiEndpoint || '');
@@ -30,7 +32,9 @@ export function Settings() {
     setLocalWebhooks(webhooks);
     setLocalLandingBg(landingBgUrl || '');
     setLocalTruemoneyPhone(truemoneyPhone || '');
-  }, [apiEndpoint, apiToken, webhooks, landingBgUrl, truemoneyPhone]);
+    setLocalCustomPullUrl(customPullUrl || '');
+    setLocalCustomPullToken(customPullToken || '');
+  }, [apiEndpoint, apiToken, webhooks, landingBgUrl, truemoneyPhone, customPullUrl, customPullToken]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -334,6 +338,59 @@ export function Settings() {
           >
             <Save size={14} />
             <span>บันทึกเบอร์</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* CUSTOM PULL API (GET /API/PULL) - Matching Image 1 100% */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-[#0D1410] border border-emerald-500/50 rounded-2xl p-6 max-w-2xl mt-8 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+        <div className="flex items-center gap-2 text-emerald-400 font-bold mb-3 text-sm tracking-wider">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse"></span>
+          <span>CUSTOM PULL API (GET /API/PULL)</span>
+        </div>
+        
+        <p className="text-xs text-gray-400 mb-5 leading-relaxed">
+          เชื่อมต่อ API ดึงคีย์อัตโนมัติจากระบบอื่น (เช่น Tang.Store หรือเว็บต้นทาง) เมื่อลูกค้าหรือตัวแทนเบิกคีย์ ระบบจะเรียก API ดึงคีย์ให้ทันที
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              API Base URL (เช่น https://tang.store หรือเว็บต้นทาง)
+            </label>
+            <input
+              type="url"
+              value={localCustomPullUrl}
+              onChange={(e) => setLocalCustomPullUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full bg-[#090C0A] border border-emerald-900/60 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs text-white focus:outline-none transition-all font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              API Token
+            </label>
+            <input
+              type="text"
+              value={localCustomPullToken}
+              onChange={(e) => setLocalCustomPullToken(e.target.value)}
+              placeholder="sk_live_..."
+              className="w-full bg-[#090C0A] border border-emerald-900/60 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs text-emerald-400 focus:outline-none transition-all font-mono"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-emerald-900/30 flex justify-end">
+          <button
+            onClick={() => {
+              updateCustomPullApi(localCustomPullUrl.trim(), localCustomPullToken.trim());
+              toast.success('บันทึกการตั้งค่า Custom Pull API เรียบร้อยแล้ว');
+            }}
+            className="w-full md:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+          >
+            <Save size={14} />
+            <span>บันทึกตั้งค่า Custom Pull API</span>
           </button>
         </div>
       </motion.div>
