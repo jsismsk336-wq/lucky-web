@@ -9,7 +9,7 @@ import { sendDiscordLog, COLORS } from '../utils/discord';
 // Secret key for AES encryption (must be complex and hidden)
 // Note: In a pure client-side app, this key is exposed in the source code.
 // Obfuscating the build helps, but it mainly deters casual local storage snooping.
-const STORAGE_SECRET = 'BLUERET_SECURE_KEY_2026_X9#';
+const STORAGE_SECRET = 'LUCKY_SECURE_KEY_2026_X9#';
 
 const secureStorage = {
   getItem: (name: string): string | null => {
@@ -174,7 +174,7 @@ const initialPartners: Partner[] = [
 const initialKeys: LicenseKey[] = [
   {
     id: 'k1',
-    keyString: 'BLUERET-WYJJAS-YNZJB',
+    keyString: 'LUCKY-WYJJAS-YNZJB',
     durationDays: 30,
     createdAt: Date.now() - 1000000,
     status: 'active',
@@ -417,7 +417,7 @@ export const useStore = create<AdminState>()(
 
         const newKeys: LicenseKey[] = Array.from({ length: amount }).map(() => ({
           id: generateRandomString(8),
-          keyString: `BLUERET-${generateRandomString(4)}-${generateRandomString(4)}-${generateRandomString(4)}`,
+          keyString: `LUCKY-${generateRandomString(4)}-${generateRandomString(4)}-${generateRandomString(4)}`,
           durationDays,
           createdAt: Date.now(),
           status: 'unused' as const,
@@ -776,7 +776,7 @@ export const useStore = create<AdminState>()(
       },
     }),
     {
-      name: 'blueret-storage',
+      name: 'lucky-storage',
       storage: createJSONStorage(() => secureStorage),
       // Only persist local auth state and logo cache
       partialize: (state) => ({

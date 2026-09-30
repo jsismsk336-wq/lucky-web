@@ -19,7 +19,7 @@ function App() {
   const globalLogoUrl = useStore(state => state.globalLogoUrl);
 
   useEffect(() => {
-    document.title = "LUCKY STORE - Reseller System";
+    document.title = "LUCKY STORE - Reseller Gateway";
     initFirebaseSync();
   }, []);
 
