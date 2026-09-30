@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Wallet, CheckCircle2, AlertCircle, Loader2, Link2, Sparkles, HelpCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { X, CheckCircle2, AlertCircle, Loader2, Coins, Gift } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useStore } from '../../store/useStore';
 import { extractVoucherHash, redeemTrueMoneyVoucher } from '../../utils/truemoney';
@@ -15,7 +15,6 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
   const [voucherUrl, setVoucherUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [detectedHash, setDetectedHash] = useState<string | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ amount: number; ownerName: string } | null>(null);
 
   useEffect(() => {
@@ -49,14 +48,14 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
       const result = await redeemTrueMoneyVoucher(voucherUrl, cleanPhone);
 
       if (result.success && result.amount && result.amount > 0) {
-        // Add credit to partner balance in Store & Firestore
+        // Add credit (points) to partner balance in Store & Firestore
         topupPartnerBalance(currentReseller.id, result.amount, result.voucherHash);
         
         setSuccessInfo({
           amount: result.amount,
           ownerName: result.ownerName || 'ผู้สร้างซอง',
         });
-        toast.success(`เติมเงินสำเร็จ +฿${result.amount.toLocaleString()} บาท!`);
+        toast.success(`เติมพอยท์สำเร็จ +${result.amount.toLocaleString()} พอยท์!`);
         setVoucherUrl('');
       } else {
         toast.error(result.message || 'ไม่สามารถรับซองทรูมันนี่ได้');
@@ -73,30 +72,24 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="relative w-full max-w-lg bg-[#0F121B] border border-orange-500/30 rounded-2xl shadow-[0_0_50px_rgba(249,115,22,0.15)] overflow-hidden text-white"
+        className="relative w-full max-w-md bg-[#0F1015] border border-purple-500/30 rounded-2xl shadow-[0_0_50px_rgba(168,85,247,0.2)] overflow-hidden text-white"
       >
-        {/* Header decoration */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-amber-400 to-orange-600" />
-        
         {/* Modal Header */}
         <div className="p-6 pb-4 border-b border-gray-800/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
-              <Wallet size={22} />
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.3)]">
+              <Gift size={22} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                เติมเงินด้วยซองทรูมันนี่
-                <span className="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-semibold">
-                  TrueMoney Wallet
-                </span>
+              <h3 className="text-lg font-black text-white flex items-center gap-1.5">
+                เติมพอยท์ <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-pink-400">ซองของขวัญ TrueMoney</span>
               </h3>
-              <p className="text-xs text-gray-400">ระบบอ่านลิงก์ซองขวัญและเติมเครดิตให้อัตโนมัติทันที</p>
+              <p className="text-[11px] text-gray-400 font-medium">อัตราเติม: 1 บาท = 1 พอยท์ (พอยท์เข้าทันที 24 ชม.)</p>
             </div>
           </div>
           <button
@@ -108,37 +101,36 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
         </div>
 
         {/* Modal Body */}
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           {successInfo ? (
             <div className="py-6 text-center space-y-4">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                type="spring"
                 className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
               >
                 <CheckCircle2 size={36} />
               </motion.div>
               <div>
-                <h4 className="text-2xl font-black text-emerald-400">เติมเงินสำเร็จ!</h4>
-                <p className="text-gray-400 text-sm mt-1">ได้รับเงินจาก {successInfo.ownerName}</p>
+                <h4 className="text-2xl font-black text-emerald-400">เติมพอยท์สำเร็จ!</h4>
+                <p className="text-gray-400 text-sm mt-1">ได้รับพอยท์จาก {successInfo.ownerName}</p>
               </div>
-              <div className="bg-[#181B28] border border-emerald-500/20 rounded-xl p-4 max-w-xs mx-auto">
-                <div className="text-xs text-gray-400">ยอดเงินที่ได้รับ</div>
-                <div className="text-3xl font-bold text-emerald-400 mt-1">
-                  +฿{successInfo.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+              <div className="bg-[#141622] border border-emerald-500/30 rounded-xl p-4 max-w-xs mx-auto">
+                <div className="text-xs text-gray-400">พอยท์ที่ได้รับเพิ่ม</div>
+                <div className="text-3xl font-black text-emerald-400 mt-1">
+                  +{successInfo.amount.toLocaleString()} พอยท์
                 </div>
               </div>
               <div className="pt-2 flex gap-3">
                 <button
                   onClick={handleResetSuccess}
-                  className="flex-1 py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold transition-all shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs transition-all shadow-lg"
                 >
-                  เติมเงินซองอื่นเพิ่ม
+                  เติมซองอื่นเพิ่ม
                 </button>
                 <button
                   onClick={onClose}
-                  className="px-4 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium transition-all"
+                  className="px-4 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs transition-all"
                 >
                   ปิดหน้าต่าง
                 </button>
@@ -146,20 +138,39 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Voucher Link input */}
+
+              {/* Current Points Display Card */}
+              <div className="bg-[#141622] border border-purple-900/40 rounded-xl p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                    <Coins size={18} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-gray-400 font-medium">พอยท์ปัจจุบันของคุณ</div>
+                    <div className="text-base font-black text-purple-300">
+                      {currentReseller?.balance?.toLocaleString() || 0} พอยท์
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[11px] bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                  <CheckCircle2 size={12} />
+                  <span>ระบบอัตโนมัติ</span>
+                </span>
+              </div>
+
+              {/* Voucher Link Input */}
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center gap-1.5">
-                  <Link2 size={14} className="text-orange-400" />
-                  วางลิงก์ซองทรูมันนี่ (TrueMoney Angpao Link)
+                <label className="block text-xs font-bold text-gray-200 mb-1.5">
+                  ลิงก์ซองของขวัญ TrueMoney <span className="text-pink-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type="url"
                     value={voucherUrl}
                     onChange={(e) => setVoucherUrl(e.target.value)}
-                    placeholder="https://gift.truemoney.com/v2/verify/?v=..."
+                    placeholder="https://gift.truemoney.com/campaign/?v=..."
                     required
-                    className="w-full bg-[#161925] border border-gray-800 focus:border-orange-500/80 rounded-xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all font-mono text-xs pr-20"
+                    className="w-full bg-[#0B0D14] border border-purple-900/50 focus:border-pink-500 rounded-xl px-4 py-3 text-white text-xs focus:outline-none transition-all font-mono"
                   />
                   {voucherUrl && (
                     <button
@@ -172,65 +183,43 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
                   )}
                 </div>
 
-                {/* Voucher Hash Detection Status */}
-                <div className="mt-2">
-                  {detectedHash ? (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
-                      <CheckCircle2 size={14} className="flex-shrink-0" />
-                      <span>พบรหัสซอง: <strong className="font-mono">{detectedHash}</strong></span>
-                    </div>
-                  ) : voucherUrl ? (
-                    <div className="flex items-center gap-1.5 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 rounded-lg">
-                      <AlertCircle size={14} className="flex-shrink-0" />
-                      <span>รูปแบบลิงก์ไม่ถูกต้อง กรุณาวางลิงก์ซองทรูมันนี่</span>
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-gray-500">
-                      ตัวอย่าง: <span className="font-mono text-gray-400">https://gift.truemoney.com/v2/verify/?v=...</span>
-                    </div>
-                  )}
+                {/* Hash Status Indicator */}
+                {detectedHash ? (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+                    <CheckCircle2 size={14} className="flex-shrink-0" />
+                    <span>พบรหัสซอง: <strong className="font-mono">{detectedHash}</strong></span>
+                  </div>
+                ) : voucherUrl ? (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 rounded-lg">
+                    <AlertCircle size={14} className="flex-shrink-0" />
+                    <span>รูปแบบลิงก์ไม่ถูกต้อง</span>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Step-by-step Instructions Box */}
+              <div className="bg-[#141622]/90 border border-gray-800/80 rounded-xl p-4 text-xs text-gray-300 space-y-2">
+                <div className="font-bold text-white flex items-center gap-1.5">
+                  <span>🎁</span>
+                  <span>วิธีสร้างซองของขวัญ TrueMoney:</span>
                 </div>
+                <ol className="space-y-1.5 text-gray-400 text-[11px] leading-relaxed pl-1">
+                  <li>1. เปิดแอป <strong>TrueMoney Wallet</strong> กดที่เมนู <strong>"โอนเงิน"</strong> &rarr; <strong>"ส่งซองของขวัญ"</strong></li>
+                  <li>2. ระบุจำนวนเงินที่ต้องการเติม (เช่น 50, 100, 500 บาท)</li>
+                  <li>3. เลือกประเภทการสุ่มเป็น <strong>"แบ่งจำนวนเงินเท่ากัน"</strong></li>
+                  <li>4. ระบุจำนวนคนรับซองเป็น <strong>"1 คน"</strong></li>
+                  <li>5. กดสร้างซอง แล้วคัดลอกลิงก์ซองมาวางในช่องด้านบน</li>
+                </ol>
               </div>
 
-              {/* Toggle Guide */}
-              <div className="border-t border-gray-800/60 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowGuide(!showGuide)}
-                  className="flex items-center gap-1.5 text-xs text-orange-400/90 hover:text-orange-300 transition-colors font-medium"
-                >
-                  <HelpCircle size={14} />
-                  <span>วิธีสร้างและส่งซองทรูมันนี่?</span>
-                </button>
-
-                <AnimatePresence>
-                  {showGuide && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-2 bg-[#141724] border border-gray-800 rounded-xl p-3 text-xs text-gray-300 space-y-1.5"
-                    >
-                      <p className="font-semibold text-white">ขั้นตอนการส่งซองง่ายๆ:</p>
-                      <ol className="list-decimal list-inside space-y-1 text-gray-400">
-                        <li>เปิดแอป <strong>TrueMoney Wallet</strong> บนมือถือ</li>
-                        <li>เลือกเมนู <strong>"ส่งซองขวัญ"</strong></li>
-                        <li>ใส่จำนวนเงินที่ต้องการเติม แล้วกด <strong>"สร้างซองขวัญ"</strong></li>
-                        <li>กด <strong>"คัดลอกลิงก์"</strong> แล้วนำมาวางในช่องด้านบน</li>
-                      </ol>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Submit Button */}
+              {/* Submit CTA Button */}
               <button
                 type="submit"
                 disabled={isLoading || !detectedHash}
-                className={`w-full py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+                className={`w-full py-3.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
                   isLoading || !detectedHash
                     ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700/50'
-                    : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-orange-500/25 active:scale-[0.99]'
+                    : 'bg-gradient-to-r from-purple-700 via-fuchsia-600 to-pink-600 hover:from-purple-600 hover:to-pink-500 text-white shadow-purple-500/25 active:scale-[0.99] cursor-pointer'
                 }`}
               >
                 {isLoading ? (
@@ -240,8 +229,8 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
                   </>
                 ) : (
                   <>
-                    <Sparkles size={18} />
-                    <span>⚡ ยืนยันการเติมเงิน</span>
+                    <Gift size={18} />
+                    <span>🎁 ยืนยันเติมพอยท์ผ่านซอง</span>
                   </>
                 )}
               </button>
