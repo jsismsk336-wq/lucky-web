@@ -72,11 +72,17 @@ export function Partners() {
                   className="hover:bg-[#1C1F2E]/50 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <span className="font-bold text-gray-200">{partner.username}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400">
-                        {t('admin.normalUsage')}
-                      </span>
+                      {partner.isPinSetup ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                          🔒 มี PIN 6 หลัก
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          ⚡ รอตั้ง PIN
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-400">{partner.role}</td>
@@ -112,6 +118,17 @@ export function Partners() {
                         className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 transition-all text-xs font-medium"
                       >
                         {t('admin.resetPassBtn')}
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if(window.confirm(`ยืนยันการรีเซ็ต PIN 6 หลักสำหรับตัวแทน ${partner.username}? ตัวแทนจะต้องตั้ง PIN 6 หลักใหม่ในการเข้าใช้งานครั้งถัดไป`)) {
+                             useStore.getState().resetPartnerPin(partner.id);
+                             toast.success(`รีเซ็ต PIN 6 หลักให้ตัวแทน ${partner.username} เรียบร้อยแล้ว`);
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 transition-all text-xs font-medium"
+                      >
+                        🔑 รีเซ็ต PIN
                       </button>
                       <button 
                         onClick={() => {

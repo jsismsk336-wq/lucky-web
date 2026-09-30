@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { generateCsrfToken, validateCsrfToken, acquireRedeemLock, releaseRedeemLock } from '../utils/security';
-import { doc, getDoc, setDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, collection, runTransaction, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import CryptoJS from 'crypto-js';
 import { sendDiscordLog, COLORS } from '../utils/discord';
@@ -33,6 +33,40 @@ const secureStorage = {
   },
 };
 
+export interface Category {
+  id: string;
+  name: string;
+  icon?: string;
+  order: number;
+  createdAt: number;
+}
+
+export interface ProductPlan {
+  id: string;
+  days: number;
+  label: string;
+  cost: number;
+  isAutoStock?: boolean;
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  categoryId: string;
+  plans: ProductPlan[];
+  isPopular?: boolean;
+  soldCount: number;
+  createdAt: number;
+
+  // Custom Pull API for this specific product
+  isAutoStock?: boolean;
+  customPullUrl?: string;
+  customPullToken?: string;
+  customTargetId?: string;
+}
+
 export interface Partner {
   id: string;
   username: string;
@@ -42,6 +76,8 @@ export interface Partner {
   status: 'active' | 'suspended';
   customPrices?: Record<number, number>;
   apiToken?: string;
+  pin?: string;
+  isPinSetup?: boolean;
 }
 
 export interface LicenseKey {
@@ -54,6 +90,8 @@ export interface LicenseKey {
   createdBy: string;
   redeemedBy: string | null;
   redeemedAt: number | null;
+  productId?: string;
+  planId?: string;
 }
 
 export interface Package {
@@ -98,17 +136,29 @@ export interface WebhooksState {
 interface AdminState {
   adminBalance: number;
   globalLogoUrl: string | null;
+  landingBgUrl: string | null;
   apiEndpoint: string | null;
   apiToken: string | null;
   adminPasswordHash: string | null;
   partners: Partner[];
   keys: LicenseKey[];
   packages: Package[];
+  categories: Category[];
+  products: Product[];
   resetRequests: ResetRequest[];
   announcements: Announcement[];
   webhooks: WebhooksState;
   currentAdmin: boolean;
   currentReseller: Partner | null;
+  maintenanceMode: boolean;
+  truemoneyPhone: string | null;
+  customPullUrl: string | null;
+  customPullToken: string | null;
+
+  // Top-up & Custom Pull API
+  topupPartnerBalance: (id: string, amountToAdd: number, voucherRef?: string) => void;
+  updateTruemoneyPhone: (phone: string) => void;
+  updateCustomPullApi: (baseUrl: string, token: string) => void;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
@@ -117,9 +167,11 @@ interface AdminState {
 
   // System Settings
   updateGlobalLogo: (base64: string | null) => void;
+  updateLandingBgUrl: (url: string | null) => void;
   updateApiSettings: (endpoint: string, token: string) => void;
   updateWebhook: (type: keyof WebhooksState, config: WebhookConfig) => void;
   updateAdminPassword: (currentPass: string, newPass: string) => boolean;
+  toggleMaintenance: (password: string) => boolean;
 
   // Partner CRUD
   addPartner: (username: string, password: string) => void;
@@ -129,6 +181,8 @@ interface AdminState {
   deletePartner: (id: string) => void;
   updatePartnerCustomPrices: (id: string, customPrices: Record<number, number>) => void;
   resetPartnerApiToken: (id: string) => void;
+  setPartnerPin: (id: string, pin: string) => void;
+  resetPartnerPin: (id: string) => void;
 
   // Key management (admin)
   generateKey: (durationDays: number, cost: number, creator: string, amount?: number) => boolean;
@@ -153,8 +207,20 @@ interface AdminState {
   toggleAnnouncementActive: (id: string) => void;
   deleteAnnouncement: (id: string) => void;
 
+  // Category management (admin)
+  addCategory: (name: string, icon?: string) => void;
+  updateCategory: (id: string, name: string, icon?: string) => void;
+  deleteCategory: (id: string) => void;
+
+  // Product management (admin)
+  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'soldCount'>) => void;
+  updateProduct: (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => void;
+  deleteProduct: (id: string) => void;
+  addKeysToProductPlan: (productId: string, planId: string, durationDays: number, keyStrings: string[], creator: string) => Promise<number>;
+
   // Reseller action - requires CSRF token
   redeemKey: (durationDays: number, quantity: number, csrfToken: string) => Promise<LicenseKey[] | 'no_stock' | 'no_credit' | 'csrf_error' | 'locked' | 'partial'>;
+  purchaseProductKey: (productId: string, planId: string, csrfToken: string, quantity?: number) => Promise<{ success: boolean; keys?: LicenseKey[]; key?: LicenseKey; error?: string }>;
 }
 
 const generateRandomString = (length: number) => {
@@ -174,7 +240,7 @@ const initialPartners: Partner[] = [
 const initialKeys: LicenseKey[] = [
   {
     id: 'k1',
-    keyString: 'LUCKY-WYJJAS-YNZJB',
+    keyString: 'BLUERET-WYJJAS-YNZJB',
     durationDays: 30,
     createdAt: Date.now() - 1000000,
     status: 'active',
@@ -203,6 +269,8 @@ export const useStore = create<AdminState>()(
       partners: [],
       keys: [],
       packages: [],
+      categories: [],
+      products: [],
       resetRequests: [],
       announcements: [],
       webhooks: {
@@ -212,10 +280,15 @@ export const useStore = create<AdminState>()(
       },
       currentAdmin: false,
       currentReseller: null,
+      maintenanceMode: false,
+      truemoneyPhone: null,
+      customPullUrl: null,
+      customPullToken: null,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
-        if (username === 'admin') {
+        const cleanUser = username.trim();
+        if (cleanUser === 'LuckyMaster_Admin99') {
           const { adminPasswordHash } = get();
           const inputHash = CryptoJS.SHA256(password).toString();
           
@@ -226,7 +299,7 @@ export const useStore = create<AdminState>()(
               return 'admin';
             }
           } else {
-            if (password === 'admin1234') {
+            if (password === 'Lucky#Secure2026@X') {
               set({ currentAdmin: true });
               generateCsrfToken();
               return 'admin';
@@ -263,6 +336,24 @@ export const useStore = create<AdminState>()(
         setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true }).catch(console.error);
       },
 
+      updateLandingBgUrl: (url) => {
+        set({ landingBgUrl: url });
+        setDoc(doc(db, 'config', 'global'), { landingBgUrl: url }, { merge: true }).catch(console.error);
+      },
+
+      toggleMaintenance: (password) => {
+        const { adminPasswordHash, maintenanceMode } = get();
+        const inputHash = CryptoJS.SHA256(password).toString();
+        if (adminPasswordHash) {
+          if (inputHash !== adminPasswordHash) return false;
+        } else {
+          if (password !== 'Lucky#Secure2026@X' && password !== 'admin1234') return false;
+        }
+        set({ maintenanceMode: !maintenanceMode });
+        setDoc(doc(db, 'config', 'global'), { maintenanceMode: !maintenanceMode }, { merge: true }).catch(console.error);
+        return true;
+      },
+
       updateApiSettings: (endpoint, token) => {
         set({ apiEndpoint: endpoint, apiToken: token });
         setDoc(doc(db, 'config', 'global'), { apiEndpoint: endpoint, apiToken: token }, { merge: true }).catch(console.error);
@@ -282,7 +373,7 @@ export const useStore = create<AdminState>()(
         if (adminPasswordHash) {
           if (currentInputHash !== adminPasswordHash) return false;
         } else {
-          if (currentPass !== 'admin1234') return false;
+          if (currentPass !== 'Lucky#Secure2026@X' && currentPass !== 'admin1234') return false;
         }
 
         const newHash = CryptoJS.SHA256(newPass).toString();
@@ -358,6 +449,59 @@ export const useStore = create<AdminState>()(
         }
       },
 
+      topupPartnerBalance: (id, amountToAdd, voucherRef) => {
+        const { partners, currentReseller, webhooks } = get();
+        const partner = partners.find(p => p.id === id);
+        if (!partner) return;
+
+        const newBalance = (partner.balance || 0) + amountToAdd;
+
+        // Update partners list
+        const updatedPartners = partners.map(p =>
+          p.id === id ? { ...p, balance: newBalance } : p
+        );
+
+        // Update current reseller session if logged in as this partner
+        const updatedCurrentReseller = (currentReseller && currentReseller.id === id)
+          ? { ...currentReseller, balance: newBalance }
+          : currentReseller;
+
+        set({
+          partners: updatedPartners,
+          currentReseller: updatedCurrentReseller,
+        });
+
+        // Sync with Firestore
+        setDoc(doc(db, 'partners', id), { balance: newBalance }, { merge: true }).catch(console.error);
+
+        // Send Discord log notification
+        if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+          sendDiscordLog(webhooks.resellerLogs.url, {
+            embeds: [{
+              title: "🎁 เติมเงินผ่านซองทรูมันนี่สำเร็จ (TrueMoney Topup)",
+              description: `ตัวแทน **${partner.username}** เติมเงินสำเร็จ!`,
+              color: COLORS.SUCCESS,
+              fields: [
+                { name: "จำนวนเงินที่เติม", value: `+฿${amountToAdd.toLocaleString()}`, inline: true },
+                { name: "ยอดเงินคงเหลือใหม่", value: `฿${newBalance.toLocaleString()}`, inline: true },
+                { name: "รหัสซองอั่งเปา", value: voucherRef ? `\`${voucherRef}\`` : "N/A", inline: false },
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
+      },
+
+      updateTruemoneyPhone: (phone) => {
+        set({ truemoneyPhone: phone });
+        setDoc(doc(db, 'config', 'global'), { truemoneyPhone: phone }, { merge: true }).catch(console.error);
+      },
+
+      updateCustomPullApi: (baseUrl, token) => {
+        set({ customPullUrl: baseUrl, customPullToken: token });
+        setDoc(doc(db, 'config', 'global'), { customPullUrl: baseUrl, customPullToken: token }, { merge: true }).catch(console.error);
+      },
+
       updatePartnerPassword: (id, newPassword) => {
         const { partners } = get();
         set({
@@ -394,7 +538,7 @@ export const useStore = create<AdminState>()(
             p.id === id ? { ...p, customPrices } : p
           )
         });
-        setDoc(doc(db, 'partners', id), { customPrices }, { merge: true });
+        updateDoc(doc(db, 'partners', id), { customPrices }).catch(console.error);
       },
 
       resetPartnerApiToken: (id) => {
@@ -406,6 +550,38 @@ export const useStore = create<AdminState>()(
           )
         });
         setDoc(doc(db, 'partners', id), { apiToken: newToken }, { merge: true });
+      },
+
+      setPartnerPin: (id, pin) => {
+        const { partners, currentReseller } = get();
+        const updatedPartners = partners.map(p =>
+          p.id === id ? { ...p, pin, isPinSetup: true } : p
+        );
+        const updatedCurrentReseller = (currentReseller && currentReseller.id === id)
+          ? { ...currentReseller, pin, isPinSetup: true }
+          : currentReseller;
+
+        set({
+          partners: updatedPartners,
+          currentReseller: updatedCurrentReseller,
+        });
+        setDoc(doc(db, 'partners', id), { pin, isPinSetup: true }, { merge: true }).catch(console.error);
+      },
+
+      resetPartnerPin: (id) => {
+        const { partners, currentReseller } = get();
+        const updatedPartners = partners.map(p =>
+          p.id === id ? { ...p, pin: '', isPinSetup: false } : p
+        );
+        const updatedCurrentReseller = (currentReseller && currentReseller.id === id)
+          ? { ...currentReseller, pin: '', isPinSetup: false }
+          : currentReseller;
+
+        set({
+          partners: updatedPartners,
+          currentReseller: updatedCurrentReseller,
+        });
+        setDoc(doc(db, 'partners', id), { pin: '', isPinSetup: false }, { merge: true }).catch(console.error);
       },
 
       // ─── KEY MANAGEMENT ──────────────────────────────────────────────────────
@@ -688,6 +864,7 @@ export const useStore = create<AdminState>()(
 
       // ─── RESELLER ACTIONS ─────────────────────────────────────────────────────
       redeemKey: async (durationDays, quantity, csrfToken) => {
+        if (get().maintenanceMode) return 'maintenance';
         if (!validateCsrfToken(csrfToken)) return 'csrf_error';
         if (!acquireRedeemLock()) return 'locked';
 
@@ -697,7 +874,7 @@ export const useStore = create<AdminState>()(
           
           if (!currentReseller) return 'no_credit';
 
-          const pkg = packages.find(p => Number(p.days) === Number(durationDays));
+          const pkg = packages.find(p => p.days === durationDays);
           if (!pkg) return 'no_stock';
 
           const partner = partners.find(p => p.id === currentReseller.id);
@@ -705,60 +882,491 @@ export const useStore = create<AdminState>()(
 
           const unitCost = partner.customPrices?.[durationDays] ?? pkg.cost;
           
-          // Find candidates from local state matching durationDays & unused status
-          const candidateKeys = keys.filter(k => Number(k.durationDays) === Number(durationDays) && k.status === 'unused');
+          // Fetch candidate keys directly from Firestore (to avoid needing all keys in local store)
+          const keysRef = collection(db, 'keys');
+          const keysQuery = query(
+            keysRef,
+            where('durationDays', '==', durationDays),
+            where('status', '==', 'unused'),
+            limit(safeQty + 10) // Buffer for race conditions
+          );
+          
+          const keysSnap = await getDocs(keysQuery);
+          const candidateKeys = keysSnap.docs.map(d => d.data() as LicenseKey);
+          
           if (candidateKeys.length === 0) return 'no_stock';
 
           const affordableQty = Math.floor(partner.balance / unitCost);
           const targetQty = Math.min(safeQty, affordableQty, candidateKeys.length);
           if (targetQty === 0) return 'no_credit';
 
-          const targetCandidates = candidateKeys.slice(0, targetQty);
-          const totalCost = unitCost * targetCandidates.length;
-          const newBalance = partner.balance - totalCost;
-          const now = Date.now();
+          let result;
+          try {
+            // Use Firestore Transaction to prevent race conditions and pumping
+            result = await runTransaction(db, async (transaction) => {
+              // 1. Read partner data
+              const partnerRef = doc(db, 'partners', partner.id);
+              const partnerSnap = await transaction.get(partnerRef);
+              if (!partnerSnap.exists()) throw "Partner not found";
+              
+              const partnerData = partnerSnap.data() as Partner;
+              const currentBalance = partnerData.balance;
 
-          // Execute atomic write batch (fast & single network call)
+              // 2. Verify candidate keys are still unused
+              const currentAffordableQty = Math.floor(currentBalance / unitCost);
+              const currentTargetQty = Math.min(safeQty, currentAffordableQty, candidateKeys.length);
+              
+              if (currentTargetQty === 0) return 'no_credit';
+
+              const verifiedKeys: LicenseKey[] = [];
+              
+              // Read all keys in parallel to avoid massive delay (2 minutes -> 1 second)
+              const kSnaps = await Promise.all(candidateKeys.map(c => transaction.get(doc(db, 'keys', c.id))));
+              
+              for (const kSnap of kSnaps) {
+                 if (verifiedKeys.length >= currentTargetQty) break;
+                 if (kSnap.exists()) {
+                   const keyData = kSnap.data() as LicenseKey;
+                   if (keyData.status === 'unused') {
+                      verifiedKeys.push(keyData);
+                   }
+                 }
+              }
+
+              if (verifiedKeys.length === 0) return 'no_stock_race';
+
+              // 3. Write updates
+              const actualQty = verifiedKeys.length;
+              const totalCost = unitCost * actualQty;
+              const newBalance = currentBalance - totalCost;
+
+              transaction.set(partnerRef, { balance: newBalance }, { merge: true });
+              
+              const now = Date.now();
+              const redeemedKeysList: LicenseKey[] = [];
+              
+              verifiedKeys.forEach(k => {
+                const keyRef = doc(db, 'keys', k.id);
+                transaction.set(keyRef, {
+                  status: 'active',
+                  redeemedBy: partner.id,
+                  redeemedAt: now
+                }, { merge: true });
+                redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+              });
+
+              return redeemedKeysList;
+            });
+          } catch (error: any) {
+            console.error("Transaction failed: ", error);
+            
+            // Fallback: Non-transactional batch update
+            try {
+              const verifiedKeys: LicenseKey[] = [];
+              const fallbackSnaps = await Promise.all(candidateKeys.map(c => getDoc(doc(db, 'keys', c.id))));
+              
+              for (const keySnap of fallbackSnaps) {
+                if (verifiedKeys.length >= targetQty) break;
+                if (keySnap.exists()) {
+                  const keyData = keySnap.data() as LicenseKey;
+                  if (keyData.status === 'unused') {
+                    verifiedKeys.push(keyData);
+                  }
+                }
+              }
+
+              if (verifiedKeys.length === 0) return 'no_stock_race';
+
+              const actualQty = verifiedKeys.length;
+              const totalCost = unitCost * actualQty;
+
+              const partnerRef = doc(db, 'partners', partner.id);
+              const partnerSnap = await getDoc(partnerRef);
+              if (!partnerSnap.exists()) return 'locked';
+              
+              const pData = partnerSnap.data() as Partner;
+              if (pData.balance < totalCost) return 'no_credit';
+
+              const batch = writeBatch(db);
+              batch.set(partnerRef, { balance: pData.balance - totalCost }, { merge: true });
+
+              const now = Date.now();
+              const redeemedKeysList: LicenseKey[] = [];
+
+              verifiedKeys.forEach(k => {
+                const keyRef = doc(db, 'keys', k.id);
+                batch.set(keyRef, {
+                  status: 'active',
+                  redeemedBy: partner.id,
+                  redeemedAt: now
+                }, { merge: true });
+                redeemedKeysList.push({ ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now });
+              });
+
+              await batch.commit();
+              result = redeemedKeysList;
+            } catch (fallbackError: any) {
+              console.error("Fallback failed: ", fallbackError);
+              return `transaction_error:${fallbackError?.message || 'unknown'}`;
+            }
+          }
+
+          if (result === 'no_stock_race') return 'no_stock';
+
+          if (Array.isArray(result) && result.length > 0) {
+            const actualQty = result.length;
+            const totalCost = unitCost * actualQty;
+
+            // Optimistically update currentReseller & partners balance locally
+            set((st) => {
+              const newBalance = (st.currentReseller?.balance ?? partner.balance) - totalCost;
+              return {
+                currentReseller: st.currentReseller ? { ...st.currentReseller, balance: newBalance } : null,
+                partners: st.partners.map(p => p.id === partner.id ? { ...p, balance: newBalance } : p)
+              };
+            });
+
+            const { webhooks } = get();
+            if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+              const actualQty = result.length;
+              const keyListString = result.map(k => k.keyString).join('\n');
+              
+              // Discord description limit is 4096 chars, 50 keys is ~1150 chars so it's safe
+              const description = `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่\n\n**รายการคีย์ที่ได้:**\n\`\`\`\n${keyListString}\n\`\`\``;
+
+              sendDiscordLog(webhooks.resellerLogs.url, {
+                embeds: [{
+                  title: "🛒 ดึงคีย์สำเร็จ",
+                  description: description,
+                  color: COLORS.SUCCESS,
+                  fields: [
+                    { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
+                    { name: "จำนวน", value: `${actualQty} คีย์`, inline: true },
+                    { name: "เครดิตที่ใช้", value: `${unitCost * actualQty}`, inline: true }
+                  ],
+                  timestamp: new Date().toISOString()
+                }]
+              });
+            }
+          }
+
+          generateCsrfToken();
+          return result;
+        } catch (error: any) {
+          console.error("Main block failed: ", error);
+        } finally {
+          releaseRedeemLock();
+        }
+      },
+
+      // Category Actions
+      addCategory: (name: string, icon?: string) => {
+        const newCat: Category = {
+          id: 'cat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          name: name.trim(),
+          icon: icon || 'Folder',
+          order: get().categories.length,
+          createdAt: Date.now(),
+        };
+        set(state => ({ categories: [...state.categories, newCat] }));
+        setDoc(doc(db, 'categories', newCat.id), newCat).catch(err => console.error("addCategory error:", err));
+      },
+
+      updateCategory: (id: string, name: string, icon?: string) => {
+        set(state => ({
+          categories: state.categories.map(c => c.id === id ? { ...c, name: name.trim(), icon: icon || c.icon } : c)
+        }));
+        updateDoc(doc(db, 'categories', id), { name: name.trim(), icon }).catch(err => console.error("updateCategory error:", err));
+      },
+
+      deleteCategory: (id: string) => {
+        set(state => ({
+          categories: state.categories.filter(c => c.id !== id)
+        }));
+        deleteDoc(doc(db, 'categories', id)).catch(err => console.error("deleteCategory error:", err));
+      },
+
+      // Product Actions
+      addProduct: (data: Omit<Product, 'id' | 'createdAt' | 'soldCount'>) => {
+        const newProd: Product = {
+          ...data,
+          id: 'prod_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          soldCount: 0,
+          createdAt: Date.now(),
+        };
+        set(state => ({ products: [newProd, ...state.products] }));
+        setDoc(doc(db, 'products', newProd.id), newProd).catch(err => console.error("addProduct error:", err));
+      },
+
+      updateProduct: (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => {
+        set(state => ({
+          products: state.products.map(p => p.id === id ? { ...p, ...productData } : p)
+        }));
+        updateDoc(doc(db, 'products', id), productData).catch(err => console.error("updateProduct error:", err));
+      },
+
+      deleteProduct: (id: string) => {
+        set(state => ({
+          products: state.products.filter(p => p.id !== id)
+        }));
+        deleteDoc(doc(db, 'products', id)).catch(err => console.error("deleteProduct error:", err));
+      },
+
+      // Stock Upload to specific Product & Plan
+      addKeysToProductPlan: async (productId: string, planId: string, durationDays: number, keyStrings: string[], creator: string) => {
+        const now = Date.now();
+        const newKeys: LicenseKey[] = keyStrings.map((keyStr, idx) => ({
+          id: 'k_' + now + '_' + idx + '_' + Math.random().toString(36).substring(2, 6),
+          keyString: keyStr.trim(),
+          durationDays,
+          createdAt: now,
+          status: 'unused',
+          hwid: null,
+          createdBy: creator,
+          redeemedBy: null,
+          redeemedAt: null,
+          productId,
+          planId,
+        }));
+
+        set(state => ({ keys: [...state.keys, ...newKeys] }));
+
+        const batchSize = 500;
+        for (let i = 0; i < newKeys.length; i += batchSize) {
+          const chunk = newKeys.slice(i, i + batchSize);
           const batch = writeBatch(db);
-          batch.update(doc(db, 'partners', partner.id), { balance: newBalance });
+          chunk.forEach(k => batch.set(doc(db, 'keys', k.id), k));
+          await batch.commit();
+        }
 
-          const redeemedKeysList: LicenseKey[] = targetCandidates.map(k => ({
+        return newKeys.length;
+      },
+
+      // Purchase Product Key (Support quantity 1 to 50 keys)
+      purchaseProductKey: async (productId: string, planId: string, csrfToken: string, quantity: number = 1) => {
+        const numToPull = Math.min(50, Math.max(1, Math.floor(quantity)));
+        const { currentReseller, products, keys } = get();
+        if (!currentReseller) return { success: false, error: 'กรุณาเข้าสู่ระบบก่อนดึงคีย์' };
+        if (!validateCsrfToken(csrfToken)) return { success: false, error: 'CSRF Token ไม่ถูกต้อง' };
+        if (!acquireRedeemLock()) return { success: false, error: 'กำลังทำรายการ โปรดรอสักครู่' };
+
+        try {
+          const product = products.find(p => p.id === productId);
+          if (!product) return { success: false, error: 'ไม่พบข้อมูลสินค้านี้' };
+          
+          const plan = product.plans.find(p => p.id === planId);
+          if (!plan) return { success: false, error: 'ไม่พบแพ็กเกจสินค้านี้' };
+
+          const totalCost = plan.cost * numToPull;
+
+          if (currentReseller.balance < totalCost) {
+            return { success: false, error: `ยอดเงินคงเหลือไม่เพียงพอ (ต้องการ ${totalCost} เครดิต แต่คุณมี ${currentReseller.balance} เครดิต)` };
+          }
+
+          // Search for unused matching keys from local store first
+          let matchingKeys = keys.filter(k => 
+            k.status === 'unused' && (
+              (k.productId === productId && k.planId === planId) ||
+              (k.productId === productId && k.durationDays === plan.days) ||
+              (!k.productId && k.durationDays === plan.days)
+            )
+          );
+
+          // If local state doesn't have enough, fetch directly from Firestore collection
+          if (matchingKeys.length < numToPull) {
+            const q = query(
+              collection(db, 'keys'),
+              where('status', '==', 'unused'),
+              limit(100)
+            );
+            const querySnap = await getDocs(q);
+            const fetchedKeys = querySnap.docs.map(doc => doc.data() as LicenseKey);
+            
+            const filtered = fetchedKeys.filter(k => 
+              k.status === 'unused' && (
+                (k.productId === productId && k.planId === planId) ||
+                (k.productId === productId && k.durationDays === plan.days) ||
+                (!k.productId && k.durationDays === plan.days)
+              )
+            );
+            
+            const map = new Map<string, LicenseKey>();
+            matchingKeys.forEach(k => map.set(k.id, k));
+            filtered.forEach(k => map.set(k.id, k));
+            matchingKeys = Array.from(map.values());
+          }
+
+          const targetKeys = matchingKeys.slice(0, numToPull);
+
+          // If local stock is insufficient or if plan is set to isAutoStock, try Custom Pull API (GET /API/PULL)
+          const pullBaseUrl = get().customPullUrl || get().apiEndpoint;
+          const pullToken = get().customPullToken || get().apiToken;
+
+          if ((plan.isAutoStock || targetKeys.length < numToPull) && pullBaseUrl && pullToken) {
+            let targetUrl = pullBaseUrl.trim();
+            if (!targetUrl.includes('/api/pull') && !targetUrl.endsWith('.php')) {
+              targetUrl = targetUrl.replace(/\/+$/, '') + '/api/pull';
+            }
+
+            const queryParams = new URLSearchParams({
+              token: pullToken.trim(),
+              days: plan.days.toString(),
+              qty: numToPull.toString(),
+              productId: productId,
+            });
+
+            const fullUrl = `${targetUrl}?${queryParams.toString()}`;
+
+            const proxies = [
+              (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+              (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            ];
+
+            const attempts = [
+              () => fetch(fullUrl, { headers: { 'Authorization': `Bearer ${pullToken}` } }),
+              ...proxies.map(makeProxy => () => fetch(makeProxy(fullUrl), { headers: { 'Authorization': `Bearer ${pullToken}` } })),
+            ];
+
+            let pulledKeyStrings: string[] = [];
+            let apiErrorMessage = '';
+
+            for (const attempt of attempts) {
+              try {
+                const res = await attempt();
+                const text = await res.text();
+                let data: any;
+                try { data = JSON.parse(text); } catch (e) { continue; }
+
+                if (data) {
+                  let extracted: string[] = [];
+                  if (Array.isArray(data.keys)) {
+                    extracted = data.keys.map((k: any) => typeof k === 'string' ? k : k.key || k.keyString || k.code);
+                  } else if (data.key || data.code || data.license_key || data.keyString) {
+                    extracted = [data.key || data.code || data.license_key || data.keyString];
+                  } else if (data.data?.key || data.data?.keys) {
+                    const d = data.data;
+                    extracted = Array.isArray(d.keys) ? d.keys : [d.key];
+                  } else if (Array.isArray(data)) {
+                    extracted = data.map((k: any) => typeof k === 'string' ? k : k.key || k.code);
+                  }
+
+                  extracted = extracted.filter(k => Boolean(k) && typeof k === 'string');
+
+                  if (extracted.length > 0) {
+                    pulledKeyStrings = extracted;
+                    break;
+                  } else if (data.message || data.error) {
+                    apiErrorMessage = data.message || data.error;
+                  }
+                }
+              } catch (err: any) {
+                console.warn("API pull attempt error:", err);
+              }
+            }
+
+            if (pulledKeyStrings.length > 0) {
+              const now = Date.now();
+              const newBalance = currentReseller.balance - totalCost;
+
+              const apiKeys: LicenseKey[] = pulledKeyStrings.slice(0, numToPull).map((keyStr, idx) => ({
+                id: 'k_api_' + now + '_' + idx + '_' + Math.random().toString(36).substring(2, 6),
+                keyString: keyStr.trim(),
+                durationDays: plan.days,
+                createdAt: now,
+                status: 'active',
+                hwid: null,
+                createdBy: 'CUSTOM_PULL_API',
+                redeemedBy: currentReseller.id,
+                redeemedAt: now,
+                productId,
+                planId,
+              }));
+
+              const batch = writeBatch(db);
+              batch.update(doc(db, 'partners', currentReseller.id), { balance: newBalance });
+              apiKeys.forEach(k => batch.set(doc(db, 'keys', k.id), k));
+              batch.update(doc(db, 'products', productId), {
+                soldCount: (product.soldCount || 0) + apiKeys.length,
+              });
+              await batch.commit();
+
+              set(state => ({
+                currentReseller: state.currentReseller ? { ...state.currentReseller, balance: newBalance } : null,
+                partners: state.partners.map(p => p.id === currentReseller.id ? { ...p, balance: newBalance } : p),
+                products: state.products.map(p => p.id === productId ? { ...p, soldCount: (p.soldCount || 0) + apiKeys.length } : p),
+                keys: [...state.keys, ...apiKeys],
+              }));
+
+              return { success: true, keys: apiKeys, key: apiKeys[0] };
+            } else if (plan.isAutoStock) {
+              return { success: false, error: '[API ต้นทาง] ' + (apiErrorMessage || 'ไม่สามารถดึงคีย์จากระบบต้นทางได้ กรุณาตรวจสอบการเชื่อมต่อ API') };
+            }
+          }
+
+          if (targetKeys.length < numToPull) {
+            return { 
+              success: false, 
+              error: targetKeys.length === 0 
+                ? 'ขออภัย สินค้าแพ็กเกจนี้หมดสต็อกแล้ว' 
+                : `ขออภัย สต็อกสินค้าคงเหลือเพียง ${targetKeys.length} คีย์ (คุณต้องการ ${numToPull} คีย์)` 
+            };
+          }
+
+          const now = Date.now();
+          const newBalance = currentReseller.balance - totalCost;
+
+          const batch = writeBatch(db);
+          batch.update(doc(db, 'partners', currentReseller.id), { balance: newBalance });
+
+          const redeemedKeys: LicenseKey[] = targetKeys.map(k => ({
             ...k,
             status: 'active',
-            redeemedBy: partner.id,
+            redeemedBy: currentReseller.id,
             redeemedAt: now,
+            durationDays: plan.days,
+            productId,
+            planId,
           }));
 
-          redeemedKeysList.forEach(k => {
+          redeemedKeys.forEach(k => {
             batch.update(doc(db, 'keys', k.id), {
               status: 'active',
-              redeemedBy: partner.id,
+              redeemedBy: currentReseller.id,
               redeemedAt: now,
+              durationDays: plan.days,
+              productId,
+              planId,
             });
+          });
+
+          batch.update(doc(db, 'products', productId), {
+            soldCount: (product.soldCount || 0) + numToPull,
           });
 
           await batch.commit();
 
-          // Update local Zustand state IMMEDIATELY so credit and keys update live on UI!
-          const redeemedIds = new Set(redeemedKeysList.map(k => k.id));
+          const targetKeyIds = new Set(targetKeys.map(k => k.id));
           set(state => ({
             currentReseller: state.currentReseller ? { ...state.currentReseller, balance: newBalance } : null,
-            partners: state.partners.map(p => p.id === partner.id ? { ...p, balance: newBalance } : p),
-            keys: state.keys.map(k => redeemedIds.has(k.id) ? { ...k, status: 'active', redeemedBy: partner.id, redeemedAt: now } : k),
+            partners: state.partners.map(p => p.id === currentReseller.id ? { ...p, balance: newBalance } : p),
+            products: state.products.map(p => p.id === productId ? { ...p, soldCount: (p.soldCount || 0) + numToPull } : p),
+            keys: state.keys.map(k => targetKeyIds.has(k.id) ? { ...k, status: 'active', redeemedBy: currentReseller.id, redeemedAt: now, durationDays: plan.days, productId, planId } : k),
           }));
 
-          // Send Discord log if enabled
           const { webhooks } = get();
-          if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+          if (webhooks?.resellerLogs?.enabled && webhooks?.resellerLogs?.url) {
+            const keyListStr = redeemedKeys.map(k => k.keyString).join('\n');
             sendDiscordLog(webhooks.resellerLogs.url, {
               embeds: [{
-                title: "🛒 ดึงคีย์สำเร็จ",
-                description: `ตัวแทน **${partner.username}** ได้ดึงคีย์ใหม่`,
+                title: "🛒 สั่งซื้อสินค้าสำเร็จ (ดึงคีย์)",
+                description: `ตัวแทน **${currentReseller.username}** ได้ดึงคีย์ **${product.title}** (${plan.label}) จำนวน **${numToPull} คีย์**`,
                 color: COLORS.SUCCESS,
                 fields: [
-                  { name: "แพ็กเกจ", value: `${durationDays} วัน`, inline: true },
-                  { name: "จำนวน", value: `${redeemedKeysList.length} คีย์`, inline: true },
-                  { name: "เครดิตที่ใช้", value: `${totalCost} เครดิต`, inline: true }
+                  { name: "สินค้า", value: product.title, inline: true },
+                  { name: "แพ็กเกจ", value: plan.label, inline: true },
+                  { name: "จำนวน", value: `${numToPull} คีย์`, inline: true },
+                  { name: "ราคารวมที่จ่าย", value: `${totalCost} เครดิต`, inline: true },
+                  { name: "รายการคีย์ที่ได้รับ", value: `\`\`\`\n${keyListStr.slice(0, 1000)}\n\`\`\``, inline: false },
                 ],
                 timestamp: new Date().toISOString()
               }]
@@ -766,10 +1374,10 @@ export const useStore = create<AdminState>()(
           }
 
           generateCsrfToken();
-          return redeemedKeysList;
-        } catch (error: any) {
-          console.error("redeemKey Error: ", error);
-          return `transaction_error:${error?.message || 'unknown'}`;
+          return { success: true, keys: redeemedKeys, key: redeemedKeys[0] };
+        } catch (err: any) {
+          console.error("purchaseProductKey Error:", err);
+          return { success: false, error: err?.message || 'เกิดข้อผิดพลาดในการดึงคีย์' };
         } finally {
           releaseRedeemLock();
         }
@@ -790,33 +1398,88 @@ export const useStore = create<AdminState>()(
   )
 );
 
+export const initialCategories: Category[] = [
+  { id: 'cat_fivem', name: 'FIVEM', icon: 'Gamepad2', order: 0, createdAt: Date.now() },
+  { id: 'cat_panel_ios', name: 'PANEL IOS', icon: 'Smartphone', order: 1, createdAt: Date.now() },
+  { id: 'cat_apps', name: 'APP PREMIUM', icon: 'Sparkles', order: 2, createdAt: Date.now() },
+];
+
+export const initialProducts: Product[] = [
+  {
+    id: 'prod_rlzxteam',
+    title: 'RLZXTEAM',
+    description: 'RLZXTEAM v3.0 - iOS Cheat / Proxy iOS เข็มทิศ ใช้งานได้ 5 แอป ติดตั้งง่าย สั่งเดียวจบ!',
+    imageUrl: 'https://th01.web2u.xyz/pic/uploads/20260916_110254_9595f736.png',
+    categoryId: 'cat_panel_ios',
+    isPopular: true,
+    soldCount: 142,
+    createdAt: Date.now(),
+    plans: [
+      { id: 'plan_12h', days: 0.5, label: '12 ชั่วโมง', cost: 20 },
+      { id: 'plan_1d', days: 1, label: '1 วัน', cost: 35 },
+      { id: 'plan_3d', days: 3, label: '3 วัน', cost: 65 },
+      { id: 'plan_7d', days: 7, label: '7 วัน', cost: 120 },
+      { id: 'plan_15d', days: 15, label: '15 วัน', cost: 150 },
+      { id: 'plan_30d', days: 30, label: '30 วัน', cost: 300 },
+    ],
+  },
+  {
+    id: 'prod_unban_fivem',
+    title: 'UNBAN FIVEM',
+    description: 'โปรแกรมปลดแบน Fivem ไม่โดนย้อนหลัง ปลอดภัย ใช้งานได้ 100%',
+    imageUrl: 'https://th01.web2u.xyz/pic/uploads/20260916_110254_9595f736.png',
+    categoryId: 'cat_fivem',
+    isPopular: true,
+    soldCount: 1427,
+    createdAt: Date.now() - 10000,
+    plans: [
+      { id: 'plan_1d', days: 1, label: '1 วัน', cost: 200 },
+      { id: 'plan_7d', days: 7, label: '7 วัน', cost: 500 },
+      { id: 'plan_30d', days: 30, label: '30 วัน', cost: 1200 },
+    ],
+  }
+];
+
 export async function initFirebaseSync() {
   const globalConfigRef = doc(db, 'config', 'global');
-  const globalConfigSnap = await getDoc(globalConfigRef);
+  
+  try {
+    const globalConfigSnap = await getDoc(globalConfigRef);
 
-  if (!globalConfigSnap.exists()) {
-    const batch = writeBatch(db);
-    batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
-    
-    initialPartners.forEach(p => {
-      batch.set(doc(db, 'partners', p.id), p);
-    });
-    
-    initialKeys.forEach(k => {
-      batch.set(doc(db, 'keys', k.id), k);
-    });
-    
-    initialPackages.forEach(p => {
-      batch.set(doc(db, 'packages', p.days.toString()), p);
-    });
-    
-    batch.set(doc(db, 'config', 'webhooks'), {
-      adminLogs: { url: '', enabled: false },
-      resellerLogs: { url: '', enabled: false },
-      systemLogs: { url: '', enabled: false }
-    });
-    
-    await batch.commit();
+    if (!globalConfigSnap.exists()) {
+      const batch = writeBatch(db);
+      batch.set(globalConfigRef, { adminBalance: 90000000000000000 });
+      
+      initialPartners.forEach(p => {
+        batch.set(doc(db, 'partners', p.id), p);
+      });
+      
+      initialKeys.forEach(k => {
+        batch.set(doc(db, 'keys', k.id), k);
+      });
+      
+      initialPackages.forEach(p => {
+        batch.set(doc(db, 'packages', p.days.toString()), p);
+      });
+
+      initialCategories.forEach(c => {
+        batch.set(doc(db, 'categories', c.id), c);
+      });
+
+      initialProducts.forEach(pr => {
+        batch.set(doc(db, 'products', pr.id), pr);
+      });
+      
+      batch.set(doc(db, 'config', 'webhooks'), {
+        adminLogs: { url: '', enabled: false },
+        resellerLogs: { url: '', enabled: false },
+        systemLogs: { url: '', enabled: false }
+      });
+      
+      await batch.commit();
+    }
+  } catch (e: any) {
+    console.error("Firebase init getDoc failed (Quota Exceeded?):", e);
   }
 
   onSnapshot(globalConfigRef, (docSnap: any) => {
@@ -825,9 +1488,14 @@ export async function initFirebaseSync() {
       useStore.setState({ 
         adminBalance: data.adminBalance,
         globalLogoUrl: data.logoUrl || null,
+        landingBgUrl: data.landingBgUrl || null,
         apiEndpoint: data.apiEndpoint || "",
         apiToken: data.apiToken || "",
-        adminPasswordHash: data.adminPasswordHash || null
+        adminPasswordHash: data.adminPasswordHash || null,
+        maintenanceMode: data.maintenanceMode || false,
+        truemoneyPhone: data.truemoneyPhone || null,
+        customPullUrl: data.customPullUrl || null,
+        customPullToken: data.customPullToken || null
       });
     }
   });
@@ -852,9 +1520,20 @@ export async function initFirebaseSync() {
     useStore.setState({ partners });
   });
 
+  // Sync keys for both admin & resellers for real-time stock calculation
   onSnapshot(collection(db, 'keys'), (snapshot: any) => {
     const keys = snapshot.docs.map((doc: any) => doc.data() as LicenseKey);
     useStore.setState({ keys });
+  });
+
+  onSnapshot(collection(db, 'categories'), (snapshot: any) => {
+    const categories = snapshot.docs.map((doc: any) => doc.data() as Category);
+    useStore.setState({ categories: categories.sort((a: any, b: any) => a.order - b.order) });
+  });
+
+  onSnapshot(collection(db, 'products'), (snapshot: any) => {
+    const products = snapshot.docs.map((doc: any) => doc.data() as Product);
+    useStore.setState({ products: products.sort((a: any, b: any) => b.createdAt - a.createdAt) });
   });
 
   onSnapshot(collection(db, 'packages'), (snapshot: any) => {
