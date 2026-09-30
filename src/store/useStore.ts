@@ -70,6 +70,8 @@ export interface Partner {
   status: 'active' | 'suspended';
   customPrices?: Record<number, number>;
   apiToken?: string;
+  pin?: string;
+  isPinSetup?: boolean;
 }
 
 export interface LicenseKey {
@@ -173,6 +175,8 @@ interface AdminState {
   deletePartner: (id: string) => void;
   updatePartnerCustomPrices: (id: string, customPrices: Record<number, number>) => void;
   resetPartnerApiToken: (id: string) => void;
+  setPartnerPin: (id: string, pin: string) => void;
+  resetPartnerPin: (id: string) => void;
 
   // Key management (admin)
   generateKey: (durationDays: number, cost: number, creator: string, amount?: number) => boolean;
@@ -540,6 +544,38 @@ export const useStore = create<AdminState>()(
           )
         });
         setDoc(doc(db, 'partners', id), { apiToken: newToken }, { merge: true });
+      },
+
+      setPartnerPin: (id, pin) => {
+        const { partners, currentReseller } = get();
+        const updatedPartners = partners.map(p =>
+          p.id === id ? { ...p, pin, isPinSetup: true } : p
+        );
+        const updatedCurrentReseller = (currentReseller && currentReseller.id === id)
+          ? { ...currentReseller, pin, isPinSetup: true }
+          : currentReseller;
+
+        set({
+          partners: updatedPartners,
+          currentReseller: updatedCurrentReseller,
+        });
+        setDoc(doc(db, 'partners', id), { pin, isPinSetup: true }, { merge: true }).catch(console.error);
+      },
+
+      resetPartnerPin: (id) => {
+        const { partners, currentReseller } = get();
+        const updatedPartners = partners.map(p =>
+          p.id === id ? { ...p, pin: '', isPinSetup: false } : p
+        );
+        const updatedCurrentReseller = (currentReseller && currentReseller.id === id)
+          ? { ...currentReseller, pin: '', isPinSetup: false }
+          : currentReseller;
+
+        set({
+          partners: updatedPartners,
+          currentReseller: updatedCurrentReseller,
+        });
+        setDoc(doc(db, 'partners', id), { pin: '', isPinSetup: false }, { merge: true }).catch(console.error);
       },
 
       // ─── KEY MANAGEMENT ──────────────────────────────────────────────────────

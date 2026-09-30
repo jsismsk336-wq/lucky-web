@@ -6,15 +6,17 @@ import { useStore } from '../../store/useStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ContactAdminModal } from '../ui/ContactAdminModal';
 import { TopupModal } from '../ui/TopupModal';
+import { PinKeypadModal } from '../ui/PinKeypadModal';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export function ResellerLayout() {
-  const { currentReseller, logoutReseller } = useStore();
+  const { currentReseller, logoutReseller, setPartnerPin } = useStore();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isTopupOpen, setIsTopupOpen] = useState(false);
+  const [isPinUnlocked, setIsPinUnlocked] = useState(false);
   const { t, language, toggleLanguage } = useTranslation();
 
   if (!currentReseller) {
@@ -24,10 +26,32 @@ export function ResellerLayout() {
   const partner = currentReseller;
 
   const handleLogout = () => {
+    setIsPinUnlocked(false);
     logoutReseller();
     toast.success('ออกจากระบบเรียบร้อย');
     navigate('/');
   };
+
+  const handlePinSuccess = (newPin?: string) => {
+    if (!partner.isPinSetup && newPin) {
+      setPartnerPin(partner.id, newPin);
+    }
+    setIsPinUnlocked(true);
+  };
+
+  // ─── PIN SECURITY LOCK OVERLAY ──────────────────────────────────────────────
+  const needsPinCheck = !partner.isPinSetup || !isPinUnlocked;
+  if (needsPinCheck) {
+    return (
+      <PinKeypadModal
+        username={partner.username}
+        isSetupMode={!partner.isPinSetup}
+        correctPin={partner.pin || ''}
+        onSuccess={handlePinSuccess}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   const menuItems = [
     { path: '/reseller/dashboard', label: t('reseller.dashboardTitle'), icon: LayoutDashboard },
