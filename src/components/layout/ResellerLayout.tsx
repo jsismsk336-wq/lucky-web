@@ -36,11 +36,11 @@ export function ResellerLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] text-white flex">
+    <div className="min-h-screen bg-[#0c0c0d] text-white flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -63,7 +63,7 @@ export function ResellerLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`w-64 bg-[#0B0E14] border-r border-gray-800/60 min-h-screen flex flex-col fixed left-0 top-0 bottom-0 z-50 transition-transform duration-300
+        className={`w-64 bg-[#101012] border-r border-white/10 min-h-screen flex flex-col fixed left-0 top-0 bottom-0 z-50 transition-transform duration-300
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
       >
         <div className="p-6 flex items-center gap-4 border-b border-gray-800/40">

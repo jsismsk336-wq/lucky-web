@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Wallet, CheckCircle2, AlertCircle, Loader2, Link2, Phone, Sparkles, HelpCircle } from 'lucide-react';
+import { X, Wallet, CheckCircle2, AlertCircle, Loader2, Link2, Sparkles, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useStore } from '../../store/useStore';
@@ -11,19 +11,12 @@ interface TopupModalProps {
 }
 
 export function TopupModal({ isOpen, onClose }: TopupModalProps) {
-  const { currentReseller, topupPartnerBalance, truemoneyPhone, updateTruemoneyPhone } = useStore();
-  const [phone, setPhone] = useState(truemoneyPhone || '');
+  const { currentReseller, topupPartnerBalance, truemoneyPhone } = useStore();
   const [voucherUrl, setVoucherUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [detectedHash, setDetectedHash] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ amount: number; ownerName: string } | null>(null);
-
-  useEffect(() => {
-    if (truemoneyPhone) {
-      setPhone(truemoneyPhone);
-    }
-  }, [truemoneyPhone]);
 
   useEffect(() => {
     const hash = extractVoucherHash(voucherUrl);
@@ -40,9 +33,9 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
       return;
     }
 
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const cleanPhone = truemoneyPhone ? truemoneyPhone.replace(/[^0-9]/g, '') : '';
     if (!cleanPhone || cleanPhone.length !== 10) {
-      toast.error('กรุณากรอกเบอร์โทรศัพท์ทรูมันนี่ 10 หลัก');
+      toast.error('ระบบยังไม่ได้ตั้งค่าเบอร์ TrueMoney รับเงิน กรุณาแจ้งแอดมินให้ตั้งค่าหลังบ้าน');
       return;
     }
 
@@ -53,11 +46,6 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
 
     setIsLoading(true);
     try {
-      // Save phone number for future top-ups
-      if (updateTruemoneyPhone && cleanPhone !== truemoneyPhone) {
-        updateTruemoneyPhone(cleanPhone);
-      }
-
       const result = await redeemTrueMoneyVoucher(voucherUrl, cleanPhone);
 
       if (result.success && result.amount && result.amount > 0) {
@@ -103,7 +91,7 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
             </div>
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                เติมเงินผ่านซองทรูมันนี่
+                เติมเงินด้วยซองทรูมันนี่
                 <span className="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-semibold">
                   TrueMoney Wallet
                 </span>
@@ -158,28 +146,6 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Phone input */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center gap-1.5">
-                  <Phone size={14} className="text-orange-400" />
-                  เบอร์โทรศัพท์ TrueMoney Wallet (รับเงินเข้าเบอร์นี้)
-                </label>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="08X-XXX-XXXX"
-                    maxLength={12}
-                    required
-                    className="w-full bg-[#161925] border border-gray-800 focus:border-orange-500/80 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all font-mono"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-orange-400/80 font-mono font-semibold">
-                    10 หลัก
-                  </div>
-                </div>
-              </div>
-
               {/* Voucher Link input */}
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center gap-1.5">
@@ -193,7 +159,7 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
                     onChange={(e) => setVoucherUrl(e.target.value)}
                     placeholder="https://gift.truemoney.com/v2/verify/?v=..."
                     required
-                    className="w-full bg-[#161925] border border-gray-800 focus:border-orange-500/80 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all font-mono text-xs pr-20"
+                    className="w-full bg-[#161925] border border-gray-800 focus:border-orange-500/80 rounded-xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all font-mono text-xs pr-20"
                   />
                   {voucherUrl && (
                     <button
@@ -234,7 +200,7 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
                   className="flex items-center gap-1.5 text-xs text-orange-400/90 hover:text-orange-300 transition-colors font-medium"
                 >
                   <HelpCircle size={14} />
-                  <span>วิธีสร้างและรับลิงก์ซองทรูมันนี่?</span>
+                  <span>วิธีสร้างและส่งซองทรูมันนี่?</span>
                 </button>
 
                 <AnimatePresence>
@@ -245,10 +211,10 @@ export function TopupModal({ isOpen, onClose }: TopupModalProps) {
                       exit={{ opacity: 0, height: 0 }}
                       className="mt-2 bg-[#141724] border border-gray-800 rounded-xl p-3 text-xs text-gray-300 space-y-1.5"
                     >
-                      <p className="font-semibold text-white">ขั้นตอนการรับซองง่ายๆ:</p>
+                      <p className="font-semibold text-white">ขั้นตอนการส่งซองง่ายๆ:</p>
                       <ol className="list-decimal list-inside space-y-1 text-gray-400">
                         <li>เปิดแอป <strong>TrueMoney Wallet</strong> บนมือถือ</li>
-                        <li>เลือกเมนู <strong>"ส่งซองขวัญ"</strong> (หรือ โอนเงิน/สร้างซอง)</li>
+                        <li>เลือกเมนู <strong>"ส่งซองขวัญ"</strong></li>
                         <li>ใส่จำนวนเงินที่ต้องการเติม แล้วกด <strong>"สร้างซองขวัญ"</strong></li>
                         <li>กด <strong>"คัดลอกลิงก์"</strong> แล้วนำมาวางในช่องด้านบน</li>
                       </ol>
