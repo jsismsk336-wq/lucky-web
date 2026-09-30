@@ -6,7 +6,7 @@ export const en = {
     settings: 'Security Settings',
     resetRequests: 'Reset Requests',
     announcements: 'Announcements',
-    adminTitle: 'LUCKY Admin',
+    adminTitle: 'LUCKY STORE Admin',
     adminRole: 'Main Administrator'
   },
   layout: {
