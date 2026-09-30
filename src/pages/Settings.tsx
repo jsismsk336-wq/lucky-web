@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff, Send } from 'lucide-react';
+import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff, Send, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../hooks/useTranslation';
@@ -12,9 +12,10 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword, truemoneyPhone, updateTruemoneyPhone } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
   const [localLandingBg, setLocalLandingBg] = useState<string>(landingBgUrl || '');
+  const [localTruemoneyPhone, setLocalTruemoneyPhone] = useState<string>(truemoneyPhone || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localApiEndpoint, setLocalApiEndpoint] = useState(apiEndpoint || '');
@@ -28,7 +29,8 @@ export function Settings() {
     setLocalApiToken(apiToken || '');
     setLocalWebhooks(webhooks);
     setLocalLandingBg(landingBgUrl || '');
-  }, [apiEndpoint, apiToken, webhooks, landingBgUrl]);
+    setLocalTruemoneyPhone(truemoneyPhone || '');
+  }, [apiEndpoint, apiToken, webhooks, landingBgUrl, truemoneyPhone]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,6 +297,43 @@ export function Settings() {
           >
             <Save size={14} />
             <span>บันทึก</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* TrueMoney Wallet Phone Setting */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-[#161925] border border-orange-500/30 rounded-2xl p-6 max-w-xl mt-8">
+        <div className="flex items-center gap-2 text-white font-medium mb-3">
+          <Phone size={18} className="text-orange-400" />
+          <span className="text-orange-400 font-bold">ตั้งค่าเบอร์ TrueMoney Wallet (รับเงินซองอั่งเปา)</span>
+        </div>
+        
+        <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+          ระบุเบอร์โทรศัพท์ TrueMoney Wallet (10 หลัก) ที่จะใช้เป็นเบอร์หลักของร้านในการกดรับเงินซองขวัญเมื่อตัวแทนเติมเงิน
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="tel"
+            maxLength={10}
+            value={localTruemoneyPhone}
+            onChange={(e) => setLocalTruemoneyPhone(e.target.value.replace(/[^0-9]/g, ''))}
+            placeholder="08X-XXX-XXXX"
+            className="flex-1 bg-[#0F111A] border border-gray-700/80 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 font-mono font-bold"
+          />
+          <button
+            onClick={() => {
+              if (localTruemoneyPhone && localTruemoneyPhone.length !== 10) {
+                toast.error('กรุณากรอกเบอร์โทรศัพท์ 10 หลัก');
+                return;
+              }
+              updateTruemoneyPhone(localTruemoneyPhone);
+              toast.success('บันทึกเบอร์ TrueMoney Wallet เรียบร้อยแล้ว');
+            }}
+            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(249,115,22,0.3)] flex items-center justify-center gap-1.5"
+          >
+            <Save size={14} />
+            <span>บันทึกเบอร์</span>
           </button>
         </div>
       </motion.div>

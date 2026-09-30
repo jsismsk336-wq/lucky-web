@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Key, LogOut, Menu, X, Headset, Globe, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Key, LogOut, Menu, X, Headset, Globe, Megaphone, Wallet } from 'lucide-react';
 import { NeonLogo } from '../ui/NeonLogo';
 import { useStore } from '../../store/useStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { ContactAdminModal } from '../ui/ContactAdminModal';
+import { TopupModal } from '../ui/TopupModal';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,7 @@ export function ResellerLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isTopupOpen, setIsTopupOpen] = useState(false);
   const { t, language, toggleLanguage } = useTranslation();
 
   if (!currentReseller) {
@@ -51,6 +53,12 @@ export function ResellerLayout() {
             onClose={() => setIsContactModalOpen(false)} 
           />
         )}
+        {isTopupOpen && (
+          <TopupModal 
+            isOpen={isTopupOpen} 
+            onClose={() => setIsTopupOpen(false)} 
+          />
+        )}
       </AnimatePresence>
 
       {/* Sidebar */}
@@ -79,9 +87,21 @@ export function ResellerLayout() {
 
         {/* Balance badge */}
         {partner && (
-          <div className="mx-4 mt-4 bg-[#1C1F2E] border border-gray-800/60 rounded-xl p-4">
-            <div className="text-xs text-gray-500 mb-1">{t('reseller.balance')}</div>
+          <div className="mx-4 mt-4 bg-[#1C1F2E] border border-gray-800/60 rounded-xl p-4 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-500">{t('reseller.balance')}</div>
+              <span className="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold">
+                TrueMoney
+              </span>
+            </div>
             <div className="text-xl font-bold text-primary">{partner.balance.toLocaleString()}</div>
+            <button
+              onClick={() => setIsTopupOpen(true)}
+              className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition-all active:scale-[0.98]"
+            >
+              <Wallet size={14} />
+              <span>เติมเงิน (ซองทรูมันนี่)</span>
+            </button>
           </div>
         )}
 

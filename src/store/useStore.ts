@@ -142,6 +142,11 @@ interface AdminState {
   currentAdmin: boolean;
   currentReseller: Partner | null;
   maintenanceMode: boolean;
+  truemoneyPhone: string | null;
+
+  // Top-up
+  topupPartnerBalance: (id: string, amountToAdd: number, voucherRef?: string) => void;
+  updateTruemoneyPhone: (phone: string) => void;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
@@ -262,6 +267,7 @@ export const useStore = create<AdminState>()(
       currentAdmin: false,
       currentReseller: null,
       maintenanceMode: false,
+      truemoneyPhone: null,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
@@ -425,6 +431,54 @@ export const useStore = create<AdminState>()(
             }]
           });
         }
+      },
+
+      topupPartnerBalance: (id, amountToAdd, voucherRef) => {
+        const { partners, currentReseller, webhooks } = get();
+        const partner = partners.find(p => p.id === id);
+        if (!partner) return;
+
+        const newBalance = (partner.balance || 0) + amountToAdd;
+
+        // Update partners list
+        const updatedPartners = partners.map(p =>
+          p.id === id ? { ...p, balance: newBalance } : p
+        );
+
+        // Update current reseller session if logged in as this partner
+        const updatedCurrentReseller = (currentReseller && currentReseller.id === id)
+          ? { ...currentReseller, balance: newBalance }
+          : currentReseller;
+
+        set({
+          partners: updatedPartners,
+          currentReseller: updatedCurrentReseller,
+        });
+
+        // Sync with Firestore
+        setDoc(doc(db, 'partners', id), { balance: newBalance }, { merge: true }).catch(console.error);
+
+        // Send Discord log notification
+        if (webhooks.resellerLogs?.enabled && webhooks.resellerLogs.url) {
+          sendDiscordLog(webhooks.resellerLogs.url, {
+            embeds: [{
+              title: "🎁 เติมเงินผ่านซองทรูมันนี่สำเร็จ (TrueMoney Topup)",
+              description: `ตัวแทน **${partner.username}** เติมเงินสำเร็จ!`,
+              color: COLORS.SUCCESS,
+              fields: [
+                { name: "จำนวนเงินที่เติม", value: `+฿${amountToAdd.toLocaleString()}`, inline: true },
+                { name: "ยอดเงินคงเหลือใหม่", value: `฿${newBalance.toLocaleString()}`, inline: true },
+                { name: "รหัสซองอั่งเปา", value: voucherRef ? `\`${voucherRef}\`` : "N/A", inline: false },
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          });
+        }
+      },
+
+      updateTruemoneyPhone: (phone) => {
+        set({ truemoneyPhone: phone });
+        setDoc(doc(db, 'config', 'global'), { truemoneyPhone: phone }, { merge: true }).catch(console.error);
       },
 
       updatePartnerPassword: (id, newPassword) => {
@@ -1280,7 +1334,8 @@ export async function initFirebaseSync() {
         apiEndpoint: data.apiEndpoint || "",
         apiToken: data.apiToken || "",
         adminPasswordHash: data.adminPasswordHash || null,
-        maintenanceMode: data.maintenanceMode || false
+        maintenanceMode: data.maintenanceMode || false,
+        truemoneyPhone: data.truemoneyPhone || null
       });
     }
   });
