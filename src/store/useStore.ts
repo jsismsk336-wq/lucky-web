@@ -1198,11 +1198,12 @@ export const useStore = create<AdminState>()(
 
           const targetKeys = matchingKeys.slice(0, numToPull);
 
-          // If local stock is insufficient or if plan is set to isAutoStock, try Custom Pull API (GET /API/PULL)
-          const pullBaseUrl = get().customPullUrl || get().apiEndpoint;
-          const pullToken = get().customPullToken || get().apiToken;
+          // If local stock is insufficient or if product/plan is set to AutoStock/customPullUrl, try Custom Pull API (GET /API/PULL)
+          const pullBaseUrl = product.customPullUrl || get().customPullUrl || get().apiEndpoint;
+          const pullToken = product.customPullToken || get().customPullToken || get().apiToken;
+          const isAutoPull = product.isAutoStock || Boolean(product.customPullUrl) || plan.isAutoStock;
 
-          if ((plan.isAutoStock || targetKeys.length < numToPull) && pullBaseUrl && pullToken) {
+          if ((isAutoPull || targetKeys.length < numToPull) && pullBaseUrl && pullToken) {
             let targetUrl = pullBaseUrl.trim();
             if (!targetUrl.includes('/api/pull') && !targetUrl.endsWith('.php')) {
               targetUrl = targetUrl.replace(/\/+$/, '') + '/api/pull';
@@ -1212,8 +1213,13 @@ export const useStore = create<AdminState>()(
               token: pullToken.trim(),
               days: plan.days.toString(),
               qty: numToPull.toString(),
-              productId: productId,
             });
+
+            if (product.customTargetId) {
+              queryParams.set('productId', product.customTargetId.trim());
+            } else if (productId) {
+              queryParams.set('productId', productId);
+            }
 
             const fullUrl = `${targetUrl}?${queryParams.toString()}`;
 
@@ -1298,8 +1304,8 @@ export const useStore = create<AdminState>()(
               }));
 
               return { success: true, keys: apiKeys, key: apiKeys[0] };
-            } else if (plan.isAutoStock) {
-              return { success: false, error: '[API ต้นทาง] ' + (apiErrorMessage || 'ไม่สามารถดึงคีย์จากระบบต้นทางได้ กรุณาตรวจสอบการเชื่อมต่อ API') };
+            } else if (isAutoPull) {
+              return { success: false, error: '[API ต้นทาง] ' + (apiErrorMessage || 'ไม่สามารถดึงคีย์จากระบบต้นทางได้ กรุณาตรวจสอบยอดเงินในระบบต้นทาง หรือ Token') };
             }
           }
 
