@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff, Send, Phone } from 'lucide-react';
+import { Lock, ImagePlus, X, Save, Link as LinkIcon, Key, Webhook, Eye, EyeOff, Send, Phone, Headset } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from '../hooks/useTranslation';
@@ -12,12 +12,14 @@ export function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword, truemoneyPhone, updateTruemoneyPhone, customPullUrl, customPullToken, updateCustomPullApi } = useStore();
+  const { globalLogoUrl, updateGlobalLogo, landingBgUrl, updateLandingBgUrl, apiEndpoint, apiToken, updateApiSettings, webhooks, updateWebhook, updateAdminPassword, truemoneyPhone, updateTruemoneyPhone, customPullUrl, customPullToken, updateCustomPullApi, discordServerUrl, devContactUrl, updateContactSettings } = useStore();
   const [logoPreview, setLogoPreview] = useState<string | null>(globalLogoUrl);
   const [localLandingBg, setLocalLandingBg] = useState<string>(landingBgUrl || '');
   const [localTruemoneyPhone, setLocalTruemoneyPhone] = useState<string>(truemoneyPhone || '');
   const [localCustomPullUrl, setLocalCustomPullUrl] = useState<string>(customPullUrl || '');
   const [localCustomPullToken, setLocalCustomPullToken] = useState<string>(customPullToken || '');
+  const [localDiscordUrl, setLocalDiscordUrl] = useState<string>(discordServerUrl || '');
+  const [localDevUrl, setLocalDevUrl] = useState<string>(devContactUrl || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localApiEndpoint, setLocalApiEndpoint] = useState(apiEndpoint || '');
@@ -34,7 +36,9 @@ export function Settings() {
     setLocalTruemoneyPhone(truemoneyPhone || '');
     setLocalCustomPullUrl(customPullUrl || '');
     setLocalCustomPullToken(customPullToken || '');
-  }, [apiEndpoint, apiToken, webhooks, landingBgUrl, truemoneyPhone, customPullUrl, customPullToken]);
+    setLocalDiscordUrl(discordServerUrl || '');
+    setLocalDevUrl(devContactUrl || '');
+  }, [apiEndpoint, apiToken, webhooks, landingBgUrl, truemoneyPhone, customPullUrl, customPullToken, discordServerUrl, devContactUrl]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,6 +118,11 @@ export function Settings() {
   const handleSaveApi = () => {
     updateApiSettings(localApiEndpoint, localApiToken);
     toast.success('บันทึกการตั้งค่า API สำเร็จ');
+  };
+
+  const handleSaveContact = () => {
+    updateContactSettings(localDiscordUrl, localDevUrl);
+    toast.success('บันทึกการตั้งค่าลิงก์ติดต่อสำเร็จ');
   };
 
   const handleSaveWebhook = (type: keyof typeof webhooks) => {
@@ -375,7 +384,7 @@ export function Settings() {
               type="text"
               value={localCustomPullToken}
               onChange={(e) => setLocalCustomPullToken(e.target.value)}
-              placeholder="sk_live_..."
+              placeholder="lky_live_..."
               className="w-full bg-[#090C0A] border border-emerald-900/60 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs text-emerald-400 focus:outline-none transition-all font-mono"
             />
           </div>
@@ -417,6 +426,49 @@ export function Settings() {
           </button>
         </div>
         <p className="text-sm text-gray-400">เมื่อเปิดใช้งาน ระบบแผงควบคุมและ API ทั้งหมดจะถูกระงับชั่วคราว</p>
+      </motion.div>
+
+      {/* Contact Links Settings */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="bg-[#161925] border border-gray-800/60 rounded-2xl p-6 max-w-xl mt-8">
+        <div className="flex items-center gap-2 text-white font-medium mb-6">
+          <Headset size={18} className="text-primary" />
+          <span>ตั้งค่าลิงก์ติดต่อ (Contact Links)</span>
+        </div>
+        
+        <p className="text-sm text-gray-400 mb-6">แก้ไขลิงก์ Discord Server และ ลิงก์ติดต่อคนทำระบบ ที่แสดงในปุ่ม "ติดต่อแอดมิน / ซัพพอร์ต"</p>
+
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-2">1. ลิงก์ Discord Server</label>
+            <input 
+              type="url" 
+              value={localDiscordUrl}
+              onChange={(e) => setLocalDiscordUrl(e.target.value)}
+              placeholder="https://discord.gg/your-server" 
+              className="w-full bg-[#0F111A] border border-gray-800/60 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 transition-colors"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-2">2. ลิงก์ ติดต่อคนทำระบบ (ผู้พัฒนา)</label>
+            <input 
+              type="url" 
+              value={localDevUrl}
+              onChange={(e) => setLocalDevUrl(e.target.value)}
+              placeholder="https://discord.gg/dev-contact หรือ Facebook / Line" 
+              className="w-full bg-[#0F111A] border border-gray-800/60 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 transition-colors"
+            />
+          </div>
+
+          <button 
+            type="button"
+            onClick={handleSaveContact}
+            className="mt-2 w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(123,97,255,0.3)] flex items-center justify-center gap-2"
+          >
+            <Save size={16} />
+            <span>บันทึกการตั้งค่าลิงก์ติดต่อ</span>
+          </button>
+        </div>
       </motion.div>
 
       {/* API Settings */}

@@ -130,14 +130,16 @@ export async function redeemTrueMoneyVoucher(
               message = 'ซองอั่งเปานี้หมดอายุแล้ว';
               break;
             case 'TARGET_USER_NOT_FOUND':
-              message = 'เบอร์โทรศัพท์ทรูมันนี่ไม่ถูกต้อง หรือไม่ได้ลงทะเบียนวอเลท';
+              message = 'เบอร์รับเงินไม่ถูกต้อง หรือเบอร์ที่ตั้งไว้ในแอดมินไม่ได้ลงทะเบียน TrueMoney Wallet';
               break;
             case 'CANNOT_GET_OWN_VOUCHER':
-              message = 'ไม่สามารถรับซองอั่งเปาของตนเองได้';
+              message = 'เบอร์คนสร้างซองกับเบอร์รับเงินเป็นเบอร์เดียวกัน (ไม่สามารถรับซองของตนเองได้)';
               break;
             default:
-              if (data.status.message) {
+              if (data.status?.message) {
                 message = `[TrueMoney] ${data.status.message}`;
+              } else if (code) {
+                message = `[TrueMoney Error] ${code}`;
               }
           }
 

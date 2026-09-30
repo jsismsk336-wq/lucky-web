@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { X, MessageSquare, Headset } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useStore } from '../../store/useStore';
 
 
 interface ContactAdminModalProps {
@@ -10,7 +11,11 @@ interface ContactAdminModalProps {
 
 export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   const { t } = useTranslation();
+  const { discordServerUrl, devContactUrl } = useStore();
   if (!isOpen) return null;
+
+  const activeDiscordUrl = discordServerUrl?.trim() || "https://discord.gg/phdTuMR6DV";
+  const activeDevUrl = devContactUrl?.trim() || "https://discord.gg/y9erNcNNab";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -39,7 +44,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
 
         <div className="space-y-3">
           <a
-            href="https://discord.gg/phdTuMR6DV"
+            href={activeDiscordUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 hover:bg-[#5865F2]/20 hover:border-[#5865F2]/50 transition-all group"
@@ -56,10 +61,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
           </a>
 
           <a
-            href="https://discord.gg/y9erNcNNab"
-            onClick={() => {
-              // Using specific developer discord link
-            }}
+            href={activeDevUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center gap-4 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/40 transition-all group"

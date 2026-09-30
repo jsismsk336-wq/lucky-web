@@ -943,7 +943,7 @@ export function CategoriesProducts() {
                       type="text"
                       value={productCustomPullToken}
                       onChange={(e) => setProductCustomPullToken(e.target.value)}
-                      placeholder="sk_live_..."
+                      placeholder="lky_live_..."
                       className="w-full px-3.5 py-2 bg-[#0B0E14] border border-emerald-500/30 rounded-xl text-white text-xs font-mono focus:border-emerald-400 focus:outline-none"
                     />
                   </div>

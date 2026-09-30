@@ -154,11 +154,14 @@ interface AdminState {
   truemoneyPhone: string | null;
   customPullUrl: string | null;
   customPullToken: string | null;
+  discordServerUrl: string | null;
+  devContactUrl: string | null;
 
-  // Top-up & Custom Pull API
+  // Top-up, Custom Pull API & Contact Settings
   topupPartnerBalance: (id: string, amountToAdd: number, voucherRef?: string) => void;
   updateTruemoneyPhone: (phone: string) => void;
   updateCustomPullApi: (baseUrl: string, token: string) => void;
+  updateContactSettings: (discordUrl: string, devUrl: string) => void;
 
   // Auth
   login: (username: string, password: string) => 'admin' | 'reseller' | 'error';
@@ -284,6 +287,8 @@ export const useStore = create<AdminState>()(
       truemoneyPhone: null,
       customPullUrl: null,
       customPullToken: null,
+      discordServerUrl: null,
+      devContactUrl: null,
 
       // ─── AUTH ───────────────────────────────────────────────────────────────
       login: (username, password) => {
@@ -339,6 +344,11 @@ export const useStore = create<AdminState>()(
       updateLandingBgUrl: (url) => {
         set({ landingBgUrl: url });
         setDoc(doc(db, 'config', 'global'), { landingBgUrl: url }, { merge: true }).catch(console.error);
+      },
+
+      updateContactSettings: (discordUrl, devUrl) => {
+        set({ discordServerUrl: discordUrl, devContactUrl: devUrl });
+        setDoc(doc(db, 'config', 'global'), { discordServerUrl: discordUrl, devContactUrl: devUrl }, { merge: true }).catch(console.error);
       },
 
       toggleMaintenance: (password) => {
@@ -404,7 +414,7 @@ export const useStore = create<AdminState>()(
           balance: 0,
           status: 'active',
           customPrices: {},
-          apiToken: 'sk_live_' + generateRandomString(24),
+          apiToken: 'lky_live_' + generateRandomString(24),
         };
         set({ partners: [...partners, newPartner] });
         setDoc(doc(db, 'partners', newPartner.id), newPartner);
@@ -543,7 +553,7 @@ export const useStore = create<AdminState>()(
 
       resetPartnerApiToken: (id) => {
         const { partners } = get();
-        const newToken = 'sk_live_' + generateRandomString(24);
+        const newToken = 'lky_live_' + generateRandomString(24);
         set({
           partners: partners.map(p =>
             p.id === id ? { ...p, apiToken: newToken } : p
@@ -1198,10 +1208,13 @@ export const useStore = create<AdminState>()(
 
           const targetKeys = matchingKeys.slice(0, numToPull);
 
-          // If local stock is insufficient or if product/plan is set to AutoStock/customPullUrl, try Custom Pull API (GET /API/PULL)
-          const pullBaseUrl = product.customPullUrl || get().customPullUrl || get().apiEndpoint;
-          const pullToken = product.customPullToken || get().customPullToken || get().apiToken;
-          const isAutoPull = product.isAutoStock || Boolean(product.customPullUrl) || plan.isAutoStock;
+          // Global fallback values for supplier API so all products can auto pull
+          const DEFAULT_SUPPLIER_URL = 'https://blueretresellers.online/api/pull';
+          const DEFAULT_SUPPLIER_TOKEN = 'lky_live_XHJ2BHJ755YB7JKWU93S21GC';
+
+          const pullBaseUrl = product.customPullUrl || get().customPullUrl || get().apiEndpoint || DEFAULT_SUPPLIER_URL;
+          const pullToken = product.customPullToken || get().customPullToken || get().apiToken || DEFAULT_SUPPLIER_TOKEN;
+          const isAutoPull = product.isAutoStock || Boolean(product.customPullUrl) || plan.isAutoStock || Boolean(pullBaseUrl && pullToken);
 
           if ((isAutoPull || targetKeys.length < numToPull) && pullBaseUrl && pullToken) {
             let targetUrl = pullBaseUrl.trim();
@@ -1224,8 +1237,8 @@ export const useStore = create<AdminState>()(
             const fullUrl = `${targetUrl}?${queryParams.toString()}`;
 
             const proxies = [
-              (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
               (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+              (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
             ];
 
             const attempts = [
@@ -1244,6 +1257,11 @@ export const useStore = create<AdminState>()(
                 try { data = JSON.parse(text); } catch (e) { continue; }
 
                 if (data) {
+                  const errCheck = String(data.error || data.message || '');
+                  if (errCheck.includes('CORSPROXY') || errCheck.includes('Anonymous legacy') || errCheck.includes('proxy URLs')) {
+                    continue; // Skip deprecated proxy error
+                  }
+
                   let extracted: string[] = [];
                   if (Array.isArray(data.keys)) {
                     extracted = data.keys.map((k: any) => typeof k === 'string' ? k : k.key || k.keyString || k.code);
@@ -1501,7 +1519,9 @@ export async function initFirebaseSync() {
         maintenanceMode: data.maintenanceMode || false,
         truemoneyPhone: data.truemoneyPhone || null,
         customPullUrl: data.customPullUrl || null,
-        customPullToken: data.customPullToken || null
+        customPullToken: data.customPullToken || null,
+        discordServerUrl: data.discordServerUrl || null,
+        devContactUrl: data.devContactUrl || null,
       });
     }
   });
