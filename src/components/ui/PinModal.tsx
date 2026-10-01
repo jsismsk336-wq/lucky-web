@@ -75,12 +75,12 @@ export function PinModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1, x: error ? [-10, 10, -10, 10, 0] : 0 }}
         transition={{ duration: error ? 0.4 : 0.2 }}
-        className="w-[95%] sm:w-full max-w-sm bg-[#101012] border border-white/12 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col items-center relative text-white max-h-[90vh] overflow-y-auto custom-scrollbar"
+        className="max-w-md w-full bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 flex flex-col items-center relative overflow-hidden"
       >
         <div className="w-16 h-16 bg-[#161925] border border-gray-800 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
           <Lock className="text-red-500" size={28} />

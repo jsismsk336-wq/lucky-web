@@ -32,11 +32,17 @@ export function TurnstileWidget({ siteKey, onVerify, onExpire, theme = 'dark' }:
       document.head.appendChild(script);
     }
 
+    const isLocalhost = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    // Official Cloudflare testing sitekey for localhost
+    const effectiveSiteKey = isLocalhost ? '1x00000000000000000000AA' : siteKey;
+
     const renderWidget = () => {
       if (window.turnstile && containerRef.current && !widgetIdRef.current) {
         try {
           widgetIdRef.current = window.turnstile.render(containerRef.current, {
-            sitekey: siteKey,
+            sitekey: effectiveSiteKey,
             theme: theme,
             callback: (token: string) => {
               onVerify(token);

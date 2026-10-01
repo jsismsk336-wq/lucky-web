@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { X, MessageSquare, Headset } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
-import { useStore } from '../../store/useStore';
 
 
 interface ContactAdminModalProps {
@@ -11,11 +10,7 @@ interface ContactAdminModalProps {
 
 export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   const { t } = useTranslation();
-  const { discordServerUrl, devContactUrl } = useStore();
   if (!isOpen) return null;
-
-  const activeDiscordUrl = discordServerUrl?.trim() || "https://discord.gg/phdTuMR6DV";
-  const activeDevUrl = devContactUrl?.trim() || "https://discord.gg/y9erNcNNab";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -44,7 +39,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
 
         <div className="space-y-3">
           <a
-            href={activeDiscordUrl}
+            href="https://discord.gg/phdTuMR6DV"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 hover:bg-[#5865F2]/20 hover:border-[#5865F2]/50 transition-all group"
@@ -61,7 +56,10 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
           </a>
 
           <a
-            href={activeDevUrl}
+            href="https://discord.gg/y9erNcNNab"
+            onClick={() => {
+              // Using specific developer discord link
+            }}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center gap-4 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/40 transition-all group"
@@ -75,6 +73,22 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
             </div>
           </a>
 
+          <a
+            href="https://t.me/Sky_blueret"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center gap-4 p-4 rounded-xl bg-[#2AABEE]/10 border border-[#2AABEE]/30 hover:bg-[#2AABEE]/20 hover:border-[#2AABEE]/50 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-[#2AABEE] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#2AABEE]/20 group-hover:scale-110 transition-transform">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.548.223l.188-2.85 5.18-4.676c.223-.198-.05-.31-.346-.11l-6.4 4.026-2.76-.86c-.6-.188-.614-.6.126-.89L17.15 7.42c.515-.19.956.128.744.8z"/>
+              </svg>
+            </div>
+            <div>
+              <div className="text-white font-bold mb-0.5 group-hover:text-[#2AABEE] transition-colors">{t('layout.ownerContact')}</div>
+              <div className="text-xs text-gray-400">{t('layout.ownerDesc')}</div>
+            </div>
+          </a>
         </div>
       </motion.div>
     </div>

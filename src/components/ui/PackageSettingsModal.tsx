@@ -115,12 +115,12 @@ export function PackageSettingsModal({ isOpen, onClose }: PackageSettingsModalPr
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
           />
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4 pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-[#101012] border border-white/12 w-[95%] sm:w-full max-w-lg p-4 sm:p-6 rounded-2xl pointer-events-auto shadow-2xl flex flex-col max-h-[90vh] text-white custom-scrollbar"
+              className="bg-[#13151E] border border-gray-800/60 w-full max-w-lg p-6 rounded-2xl pointer-events-auto shadow-2xl flex flex-col max-h-[90vh]"
             >
               <div className="flex justify-between items-center mb-6 border-b border-gray-800/60 pb-4 shrink-0">
                 <div className="flex items-center gap-3">

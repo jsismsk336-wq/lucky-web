@@ -2,7 +2,7 @@ import { useStore } from '../../store/useStore';
 
 export function NeonLogo({ className = '', size = 'sm' }: { className?: string, size?: 'sm' | 'md' | 'lg' }) {
   const { globalLogoUrl } = useStore();
-  const text = " LUCKY • LUCKY • LUCKY • ";
+  const text = " LUCKY STORE • LUCKY STORE • LUCKY STORE • ";
   const chars = text.split('');
 
   const config = {
@@ -52,7 +52,7 @@ export function NeonLogo({ className = '', size = 'sm' }: { className?: string, 
       {/* Center Logo */}
       <img 
         src={globalLogoUrl || "/logo.png"} 
-        alt="BLUERET Logo" 
+        alt="LUCKY STORE Logo" 
         className={`${config.img} object-contain relative z-10 drop-shadow-[0_0_15px_rgba(66,133,244,0.4)]`} 
       />
     </div>
