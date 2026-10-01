@@ -1268,24 +1268,16 @@ export const useStore = create<AdminState>()(
               ? `${targetUrl}&${queryParams.toString()}`
               : `${targetUrl}?${queryParams.toString()}`;
 
-            const proxies = [
-              (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-              (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-              (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-              (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
-            ];
-
-            const attempts = [
-              () => fetch(fullUrl, { headers: { 'Authorization': `Bearer ${pullToken}`, 'x-api-key': pullToken } }),
-              ...proxies.map(makeProxy => () => fetch(makeProxy(fullUrl), { headers: { 'Authorization': `Bearer ${pullToken}`, 'x-api-key': pullToken } })),
-            ];
-
-            let pulledKeyStrings: string[] = [];
-            let apiErrorMessage = '';
-
-            for (const attempt of attempts) {
+            const fetchWithTimeout = async (urlStr: string, timeoutMs = 3500) => {
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), timeoutMs);
               try {
-                const res = await attempt();
+                const res = await fetch(urlStr, {
+                  headers: { 'Authorization': `Bearer ${pullToken}`, 'x-api-key': pullToken },
+                  signal: controller.signal,
+                });
+                clearTimeout(timer);
+                if (!res.ok && res.status !== 200) return null;
                 const text = await res.text();
                 let data: any;
                 let extracted: string[] = [];
@@ -1302,7 +1294,7 @@ export const useStore = create<AdminState>()(
                 if (data) {
                   const errCheck = String(data.error || data.message || '');
                   if (errCheck.includes('CORSPROXY') || errCheck.includes('Anonymous legacy') || errCheck.includes('proxy URLs')) {
-                    continue; // Skip deprecated proxy error
+                    return null;
                   }
 
                   if (Array.isArray(data.keys)) {
@@ -1322,17 +1314,45 @@ export const useStore = create<AdminState>()(
                   extracted = extracted.filter(k => Boolean(k) && typeof k === 'string');
 
                   if (extracted.length > 0) {
-                    pulledKeyStrings = extracted;
-                    break;
+                    return { keys: extracted, error: null };
                   } else if (data.message || data.error || data.msg || data.detail) {
-                    apiErrorMessage = data.message || data.error || data.msg || data.detail;
+                    return { keys: [], error: data.message || data.error || data.msg || data.detail };
                   }
                 } else if (extracted.length > 0) {
-                  pulledKeyStrings = extracted;
-                  break;
+                  return { keys: extracted, error: null };
                 }
-              } catch (err: any) {
-                console.warn("API pull attempt error:", err);
+              } catch (e) {
+                clearTimeout(timer);
+              }
+              return null;
+            };
+
+            let pulledKeyStrings: string[] = [];
+            let apiErrorMessage = '';
+
+            // 1. Try direct fetch first (super fast < 500ms)
+            const directResult = await fetchWithTimeout(fullUrl, 3500);
+            if (directResult?.keys && directResult.keys.length > 0) {
+              pulledKeyStrings = directResult.keys;
+            } else {
+              if (directResult?.error) apiErrorMessage = directResult.error;
+
+              // 2. If direct fails (CORS or timeout), run fast parallel proxy racing
+              const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(fullUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fullUrl)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(fullUrl)}`,
+                `https://thingproxy.freeboard.io/fetch/${fullUrl}`,
+              ];
+
+              const results = await Promise.allSettled(proxies.map(url => fetchWithTimeout(url, 4000)));
+              for (const res of results) {
+                if (res.status === 'fulfilled' && res.value?.keys && res.value.keys.length > 0) {
+                  pulledKeyStrings = res.value.keys;
+                  break;
+                } else if (res.status === 'fulfilled' && res.value?.error && !apiErrorMessage) {
+                  apiErrorMessage = res.value.error;
+                }
               }
             }
 
