@@ -110,11 +110,11 @@ export function initSecurityHardening(): () => void {
   const handleContextMenu = (e: MouseEvent) => e.preventDefault();
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+    // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S, Ctrl+P
     if (
       e.key === 'F12' ||
       (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
-      (e.ctrlKey && e.key === 'U')
+      (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P'))
     ) {
       e.preventDefault();
       e.stopPropagation();

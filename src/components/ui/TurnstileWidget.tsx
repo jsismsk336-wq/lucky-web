@@ -22,6 +22,14 @@ export function TurnstileWidget({ siteKey, onVerify, onExpire, theme = 'dark' }:
   const widgetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // If siteKey is dummy/test key, auto-pass silently without showing red test banner
+    const isTestKey = !siteKey || siteKey === '0x4AAAAAAAFKwj9masvMH5tDX' || siteKey === '1x00000000000000000000AA';
+    
+    if (isTestKey) {
+      onVerify('auto_pass_token');
+      return;
+    }
+
     // Inject Cloudflare Turnstile script dynamically if not present
     if (!document.getElementById('cloudflare-turnstile-script')) {
       const script = document.createElement('script');
@@ -32,16 +40,11 @@ export function TurnstileWidget({ siteKey, onVerify, onExpire, theme = 'dark' }:
       document.head.appendChild(script);
     }
 
-    // Official Cloudflare testing sitekey (Always Pass) fallback
-    const effectiveSiteKey = (siteKey && siteKey !== '0x4AAAAAAAFKwj9masvMH5tDX')
-      ? siteKey 
-      : '1x00000000000000000000AA';
-
     const renderWidget = () => {
       if (window.turnstile && containerRef.current && !widgetIdRef.current) {
         try {
           widgetIdRef.current = window.turnstile.render(containerRef.current, {
-            sitekey: effectiveSiteKey,
+            sitekey: siteKey,
             theme: theme,
             callback: (token: string) => {
               onVerify(token);
