@@ -163,12 +163,12 @@ export function RefillStockModal({ packageData, onClose }: RefillStockModalProps
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
           />
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4 pointer-events-none">
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-[#13151E] border border-gray-800/60 w-full max-w-md rounded-2xl pointer-events-auto shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-[#101012] border border-white/12 w-[95%] sm:w-full max-w-md rounded-2xl pointer-events-auto shadow-2xl overflow-y-auto custom-scrollbar flex flex-col max-h-[90vh] text-white"
             >
               {/* Header */}
               <div className="flex justify-between items-center p-6 border-b border-gray-800/60 shrink-0">

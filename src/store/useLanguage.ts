@@ -17,7 +17,7 @@ export const useLanguage = create<LanguageState>()(
       toggleLanguage: () => set((state) => ({ language: state.language === 'th' ? 'en' : 'th' })),
     }),
     {
-      name: 'lucky-language',
+      name: 'blueret-language',
     }
   )
 );

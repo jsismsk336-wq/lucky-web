@@ -1,8 +1,9 @@
 import { useStore } from '../../store/useStore';
+import { HexagonLogo } from './HexagonLogo';
 
 export function NeonLogo({ className = '', size = 'sm' }: { className?: string, size?: 'sm' | 'md' | 'lg' }) {
   const { globalLogoUrl } = useStore();
-  const text = " LUCKY STORE • LUCKY STORE • LUCKY STORE • ";
+  const text = " LUCKY • LUCKY • LUCKY • ";
   const chars = text.split('');
 
   const config = {
@@ -50,11 +51,15 @@ export function NeonLogo({ className = '', size = 'sm' }: { className?: string, 
       </div>
       
       {/* Center Logo */}
-      <img 
-        src={globalLogoUrl || "/logo.png"} 
-        alt="LUCKY STORE Logo" 
-        className={`${config.img} object-contain relative z-10 drop-shadow-[0_0_15px_rgba(66,133,244,0.4)]`} 
-      />
+      {globalLogoUrl ? (
+        <img 
+          src={globalLogoUrl} 
+          alt="LUCKY Logo" 
+          className={`${config.img} object-contain relative z-10 drop-shadow-[0_0_15px_rgba(66,133,244,0.4)]`} 
+        />
+      ) : (
+        <HexagonLogo className={`${config.img} relative z-10 drop-shadow-[0_0_15px_rgba(66,133,244,0.4)]`} />
+      )}
     </div>
   );
 }

@@ -15,7 +15,8 @@ import {
   Layers, 
   Image as ImageIcon,
   Tag,
-  AlertCircle
+  AlertCircle,
+  Power
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -29,6 +30,7 @@ export function CategoriesProducts() {
     deleteCategory, 
     addProduct, 
     updateProduct, 
+    toggleProductDisabled,
     deleteProduct, 
     addKeysToProductPlan 
   } = useStore();
@@ -48,6 +50,11 @@ export function CategoriesProducts() {
   const [productImageUrl, setProductImageUrl] = useState('');
   const [productCategoryId, setProductCategoryId] = useState('');
   const [productIsPopular, setProductIsPopular] = useState(false);
+  const [productIsDisabled, setProductIsDisabled] = useState(false);
+  const [productIsAutoStock, setProductIsAutoStock] = useState(false);
+  const [productCustomPullUrl, setProductCustomPullUrl] = useState('');
+  const [productCustomPullToken, setProductCustomPullToken] = useState('');
+  const [productCustomTargetId, setProductCustomTargetId] = useState('');
   const [productPlans, setProductPlans] = useState<ProductPlan[]>([
     { id: 'plan_12h', days: 0.5, label: '12 ชั่วโมง', cost: 20 },
     { id: 'plan_1d', days: 1, label: '1 วัน', cost: 35 },
@@ -174,7 +181,12 @@ export function CategoriesProducts() {
       setProductImageUrl(prod.imageUrl);
       setProductCategoryId(prod.categoryId);
       setProductIsPopular(prod.isPopular || false);
+      setProductIsDisabled(prod.isDisabled || false);
       setProductPlans(prod.plans || []);
+      setProductIsAutoStock(prod.isAutoStock || false);
+      setProductCustomPullUrl(prod.customPullUrl || '');
+      setProductCustomPullToken(prod.customPullToken || '');
+      setProductCustomTargetId(prod.customTargetId || '');
     } else {
       setEditingProduct(null);
       setProductTitle('');
@@ -182,6 +194,11 @@ export function CategoriesProducts() {
       setProductImageUrl('');
       setProductCategoryId(categories[0]?.id || '');
       setProductIsPopular(false);
+      setProductIsDisabled(false);
+      setProductIsAutoStock(false);
+      setProductCustomPullUrl('');
+      setProductCustomPullToken('');
+      setProductCustomTargetId('');
       setProductPlans([
         { id: 'plan_' + Date.now() + '_12h', days: 0.5, label: '12 ชั่วโมง', cost: 20 },
         { id: 'plan_' + Date.now() + '_1d', days: 1, label: '1 วัน', cost: 35 },
@@ -223,7 +240,12 @@ export function CategoriesProducts() {
         imageUrl: productImageUrl.trim(),
         categoryId: productCategoryId,
         isPopular: productIsPopular,
+        isDisabled: productIsDisabled,
         plans: productPlans,
+        isAutoStock: productIsAutoStock,
+        customPullUrl: productCustomPullUrl.trim(),
+        customPullToken: productCustomPullToken.trim(),
+        customTargetId: productCustomTargetId.trim(),
       });
       toast.success('อัปเดตข้อมูลสินค้าเรียบร้อยแล้ว');
     } else {
@@ -233,7 +255,12 @@ export function CategoriesProducts() {
         imageUrl: productImageUrl.trim(),
         categoryId: productCategoryId,
         isPopular: productIsPopular,
+        isDisabled: productIsDisabled,
         plans: productPlans,
+        isAutoStock: productIsAutoStock,
+        customPullUrl: productCustomPullUrl.trim(),
+        customPullToken: productCustomPullToken.trim(),
+        customTargetId: productCustomTargetId.trim(),
       });
       toast.success('เพิ่มสินค้าใหม่เรียบร้อยแล้ว');
     }
@@ -388,12 +415,17 @@ export function CategoriesProducts() {
                             ไม่มีรูปภาพ
                           </div>
                         )}
-                        {prod.isPopular && (
+                        {prod.isDisabled ? (
+                          <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-red-950/90 border border-red-500/60 text-red-400 text-[10px] font-bold flex items-center gap-1 shadow-lg">
+                            <Power size={12} />
+                            ปิดใช้งานอยู่
+                          </span>
+                        ) : prod.isPopular ? (
                           <span className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center gap-1 shadow-lg">
                             <Flame size={12} />
                             ยอดฮิต
                           </span>
-                        )}
+                        ) : null}
                         <span className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-gray-700 text-gray-300 text-[10px] font-semibold">
                           {category?.name || 'ไม่มีหมวดหมู่'}
                         </span>
@@ -447,8 +479,24 @@ export function CategoriesProducts() {
                         </button>
 
                         <button
+                          onClick={() => {
+                            toggleProductDisabled(prod.id);
+                            toast.success(prod.isDisabled ? `เปิดใช้งานสินค้า "${prod.title}" แล้ว` : `ปิดใช้งานสินค้า "${prod.title}" แล้ว`);
+                          }}
+                          title={prod.isDisabled ? "คลิกเพื่อเปิดใช้งานสินค้า" : "คลิกเพื่อปิดใช้งานสินค้า"}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            prod.isDisabled
+                              ? 'text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 border border-red-500/40'
+                              : 'text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40'
+                          }`}
+                        >
+                          <Power size={14} />
+                        </button>
+
+                        <button
                           onClick={() => handleOpenProductModal(prod)}
                           className="p-1.5 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+                          title="แก้ไขสินค้า"
                         >
                           <Edit size={14} />
                         </button>
@@ -456,6 +504,7 @@ export function CategoriesProducts() {
                         <button
                           onClick={() => handleDeleteProduct(prod)}
                           className="p-1.5 text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/50 rounded-lg transition-colors cursor-pointer"
+                          title="ลบสินค้า"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -787,17 +836,32 @@ export function CategoriesProducts() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="popularCheck"
-                  checked={productIsPopular}
-                  onChange={(e) => setProductIsPopular(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-800 bg-[#0B0E14] text-red-600 focus:ring-red-500"
-                />
-                <label htmlFor="popularCheck" className="text-xs text-gray-300 font-semibold cursor-pointer">
-                  ติดป้าย "ยอดฮิต 🔥" ที่หน้าสินค้า
-                </label>
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="popularCheck"
+                    checked={productIsPopular}
+                    onChange={(e) => setProductIsPopular(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-800 bg-[#0B0E14] text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="popularCheck" className="text-xs text-gray-300 font-semibold cursor-pointer">
+                    ติดป้าย "ยอดฮิต 🔥" ที่หน้าสินค้า
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="disabledCheck"
+                    checked={productIsDisabled}
+                    onChange={(e) => setProductIsDisabled(e.target.checked)}
+                    className="w-4 h-4 rounded border-red-800 bg-[#0B0E14] text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="disabledCheck" className="text-xs text-red-400 font-bold cursor-pointer">
+                    🚫 ปิดใช้งานสินค้าชั่วคราว (ซ่อนจากหน้าตัวแทน)
+                  </label>
+                </div>
               </div>
 
               {/* Dynamic Duration Plans Builder */}
@@ -874,6 +938,72 @@ export function CategoriesProducts() {
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* 🟢 CUSTOM PULL API SETTINGS FOR THIS SPECIFIC PRODUCT */}
+              <div className="bg-[#0b1410] border border-emerald-500/40 rounded-2xl p-4 space-y-3.5 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm tracking-wider">
+                      🟢 CUSTOM PULL API (GET /API/PULL) ประจำสินค้านี้
+                    </span>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl hover:bg-emerald-500/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={productIsAutoStock}
+                      onChange={(e) => setProductIsAutoStock(e.target.checked)}
+                      className="w-4 h-4 rounded border-emerald-500/50 bg-[#0B0E14] text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span className="text-xs text-emerald-300 font-bold">เปิดดึงคีย์อัตโนมัติ (Auto Pull)</span>
+                  </label>
+                </div>
+
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  เชื่อมต่อ API ดึงคีย์อัตโนมัติจากระบบอื่น (เช่น Tang.Store หรือเว็บต้นทาง) สำหรับสินค้านี้ เมื่อลูกค้าหรือตัวแทนเบิกคีย์ ระบบจะเรียก API ดึงคีย์ให้อัตโนมัติ
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                      API Base URL (เช่น https://tang.store หรือเว็บต้นทาง)
+                    </label>
+                    <input
+                      type="url"
+                      value={productCustomPullUrl}
+                      onChange={(e) => setProductCustomPullUrl(e.target.value)}
+                      placeholder="https://tang.store/api/pull"
+                      className="w-full px-3.5 py-2 bg-[#0B0E14] border border-emerald-500/30 rounded-xl text-white text-xs font-mono focus:border-emerald-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                      API Token / Secret Key
+                    </label>
+                    <input
+                      type="text"
+                      value={productCustomPullToken}
+                      onChange={(e) => setProductCustomPullToken(e.target.value)}
+                      placeholder="lky_live_..."
+                      className="w-full px-3.5 py-2 bg-[#0B0E14] border border-emerald-500/30 rounded-xl text-white text-xs font-mono focus:border-emerald-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                    Target Product ID (รหัสสินค้าต้นทาง เช่น prod_meowt_android)
+                  </label>
+                  <input
+                    type="text"
+                    value={productCustomTargetId}
+                    onChange={(e) => setProductCustomTargetId(e.target.value)}
+                    placeholder="ระบุรหัสสินค้าต้นทาง (ถ้ามี)"
+                    className="w-full px-3.5 py-2 bg-[#0B0E14] border border-emerald-500/30 rounded-xl text-white text-xs font-mono focus:border-emerald-400 focus:outline-none"
+                  />
                 </div>
               </div>
 

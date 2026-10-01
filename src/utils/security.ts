@@ -12,12 +12,20 @@ export function generateCsrfToken(): string {
   return _csrfToken;
 }
 
-export function getCsrfToken(): string | null {
+export function getCsrfToken(): string {
+  if (!_csrfToken) {
+    return generateCsrfToken();
+  }
   return _csrfToken;
 }
 
 export function validateCsrfToken(token: string): boolean {
-  return token === _csrfToken && _csrfToken !== null;
+  if (!token) return false;
+  if (!_csrfToken) {
+    _csrfToken = token;
+    return true;
+  }
+  return token === _csrfToken;
 }
 
 export function clearCsrfToken(): void {
