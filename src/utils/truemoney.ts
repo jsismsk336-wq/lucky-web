@@ -74,8 +74,8 @@ export async function redeemTrueMoneyVoucher(
     body: payload,
   };
 
-  // Modern CORS proxies list for client-side web apps
-  const proxies = [
+  // Modern CORS proxies and fallback endpoints list for web client environments
+  const proxyConstructors = [
     (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
     (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
     (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
@@ -83,10 +83,10 @@ export async function redeemTrueMoneyVoucher(
 
   const attempts: (() => Promise<Response>)[] = [
     () => fetch(targetUrl, requestOptions),
-    ...proxies.map(p => () => fetch(p(targetUrl), requestOptions)),
+    ...proxyConstructors.map(p => () => fetch(p(targetUrl), requestOptions)),
   ];
 
-  let lastErrorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ TrueMoney (การเชื่อมต่อถูกบล็อก หรือ ลิงก์ซองหมดอายุ)';
+  let lastErrorMessage = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ TrueMoney ได้ (กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือลองใหม่อีกครั้ง)';
 
   for (const attempt of attempts) {
     try {
@@ -116,31 +116,27 @@ export async function redeemTrueMoneyVoucher(
             message: `รับซองทรูมันนี่สำเร็จ! ได้รับเงิน ฿${amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`,
           };
         } else {
-          const code = data.status.code;
-          let message = 'ไม่สามารถรับซองทรูมันนี่ได้';
+          const code = data.status.code || 'UNKNOWN';
+          const rawMsg = data.status.message || '';
+          let message = rawMsg ? `[TrueMoney] ${rawMsg}` : `ไม่สามารถรับซองทรูมันนี่ได้ (${code})`;
 
           switch (code) {
             case 'VOUCHER_OUT_OF_STOCK':
-              message = 'ซองอั่งเปานี้ถูกใช้งานไปหมดแล้ว หรือมีคนรับไปแล้ว';
+              message = 'ซองอั่งเปานี้ถูกใช้งานไปหมดแล้ว หรือมีผู้รับไปแล้ว';
               break;
             case 'VOUCHER_NOT_FOUND':
-              message = 'ไม่พบรหัสซองอั่งเปานี้ในระบบ TrueMoney (กรุณาตรวจสอบลิงก์อีกครั้ง)';
+              message = 'ไม่พบรหัสซองอั่งเปานี้ในระบบ TrueMoney (กรุณาตรวจสอบลิงก์ซองว่าถูกต้องหรือไม่)';
               break;
             case 'VOUCHER_EXPIRED':
-              message = 'ซองอั่งเปานี้หมดอายุแล้ว';
+              message = 'ซองอั่งเปานี้หมดอายุแล้ว (เกิน 72 ชั่วโมง)';
               break;
+
             case 'TARGET_USER_NOT_FOUND':
-              message = 'เบอร์รับเงินที่ตั้งไว้ในแอดมินยังไม่ได้ลงทะเบียน TrueMoney Wallet';
+              message = `เบอร์รับเงิน (${cleanPhone}) ที่ตั้งในระบบยังไม่ได้ลงทะเบียน TrueMoney Wallet`;
               break;
             case 'CANNOT_GET_OWN_VOUCHER':
-              message = 'เบอร์คนสร้างซองกับเบอร์รับเงินเป็นเบอร์เดียวกัน (ไม่สามารถรับซองของตัวเองได้)';
+              message = `เบอร์คนสร้างซองกับเบอร์รับเงินแอดมิน (${cleanPhone}) เป็นเบอร์เดียวกัน (ไม่สามารถรับซองของตนเองได้)`;
               break;
-            default:
-              if (data.status?.message) {
-                message = `[TrueMoney] ${data.status.message}`;
-              } else if (code) {
-                message = `[TrueMoney] รหัสข้อผิดพลาด: ${code}`;
-              }
           }
 
           return {

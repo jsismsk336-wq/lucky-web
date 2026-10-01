@@ -18,12 +18,14 @@ import {
 } from '../utils/security';
 import toast from 'react-hot-toast';
 import { ShieldCheck, Zap, Sparkles, ArrowRight, ShoppingBag, ArrowLeft, PackageCheck } from 'lucide-react';
+import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 
 export function Login() {
   const [showLanding, setShowLanding] = useState(true);
   const [showStockModal, setShowStockModal] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lockoutMs, setLockoutMs] = useState(0);
   const navigate = useNavigate();
@@ -317,6 +319,12 @@ export function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={isLocked}
+                />
+
+                <TurnstileWidget
+                  siteKey="0x4AAAAAAAFKwj9masvMH5tDX"
+                  onVerify={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
                 />
 
                 <GradientButton

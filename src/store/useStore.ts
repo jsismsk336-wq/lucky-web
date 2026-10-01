@@ -1232,32 +1232,43 @@ export const useStore = create<AdminState>()(
 
           if ((isAutoPull || targetKeys.length < numToPull) && pullBaseUrl && pullToken) {
             let targetUrl = pullBaseUrl.trim();
-            if (!targetUrl.includes('/api/pull') && !targetUrl.endsWith('.php')) {
+            if (!targetUrl.includes('/api/pull') && !targetUrl.endsWith('.php') && !targetUrl.includes('.php?')) {
               targetUrl = targetUrl.replace(/\/+$/, '') + '/api/pull';
             }
 
             const queryParams = new URLSearchParams({
               token: pullToken.trim(),
+              api_key: pullToken.trim(),
+              key: pullToken.trim(),
               days: plan.days.toString(),
+              duration: plan.days.toString(),
               qty: numToPull.toString(),
+              quantity: numToPull.toString(),
+              amount: numToPull.toString(),
             });
 
-            if (product.customTargetId) {
-              queryParams.set('productId', product.customTargetId.trim());
-            } else if (productId) {
-              queryParams.set('productId', productId);
+            const targetProductId = product.customTargetId?.trim() || productId;
+            if (targetProductId) {
+              queryParams.set('productId', targetProductId);
+              queryParams.set('product_id', targetProductId);
+              queryParams.set('prod_id', targetProductId);
+              queryParams.set('id', targetProductId);
             }
 
-            const fullUrl = `${targetUrl}?${queryParams.toString()}`;
+            const fullUrl = targetUrl.includes('?') 
+              ? `${targetUrl}&${queryParams.toString()}`
+              : `${targetUrl}?${queryParams.toString()}`;
 
             const proxies = [
+              (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+              (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
               (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
               (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
             ];
 
             const attempts = [
-              () => fetch(fullUrl, { headers: { 'Authorization': `Bearer ${pullToken}` } }),
-              ...proxies.map(makeProxy => () => fetch(makeProxy(fullUrl), { headers: { 'Authorization': `Bearer ${pullToken}` } })),
+              () => fetch(fullUrl, { headers: { 'Authorization': `Bearer ${pullToken}`, 'x-api-key': pullToken } }),
+              ...proxies.map(makeProxy => () => fetch(makeProxy(fullUrl), { headers: { 'Authorization': `Bearer ${pullToken}`, 'x-api-key': pullToken } })),
             ];
 
             let pulledKeyStrings: string[] = [];
@@ -1268,7 +1279,16 @@ export const useStore = create<AdminState>()(
                 const res = await attempt();
                 const text = await res.text();
                 let data: any;
-                try { data = JSON.parse(text); } catch (e) { continue; }
+                let extracted: string[] = [];
+
+                try { 
+                  data = JSON.parse(text); 
+                } catch (e) { 
+                  const trimmedText = text.trim();
+                  if (trimmedText && !trimmedText.startsWith('<') && !trimmedText.includes('DOCTYPE') && !trimmedText.includes('404 Not Found')) {
+                    extracted = [trimmedText];
+                  }
+                }
 
                 if (data) {
                   const errCheck = String(data.error || data.message || '');
@@ -1276,16 +1296,18 @@ export const useStore = create<AdminState>()(
                     continue; // Skip deprecated proxy error
                   }
 
-                  let extracted: string[] = [];
                   if (Array.isArray(data.keys)) {
-                    extracted = data.keys.map((k: any) => typeof k === 'string' ? k : k.key || k.keyString || k.code);
-                  } else if (data.key || data.code || data.license_key || data.keyString) {
-                    extracted = [data.key || data.code || data.license_key || data.keyString];
-                  } else if (data.data?.key || data.data?.keys) {
-                    const d = data.data;
-                    extracted = Array.isArray(d.keys) ? d.keys : [d.key];
+                    extracted = data.keys.map((k: any) => typeof k === 'string' ? k : k.key || k.keyString || k.code || k.license_key || k.license);
+                  } else if (Array.isArray(data.data?.keys)) {
+                    extracted = data.data.keys.map((k: any) => typeof k === 'string' ? k : k.key || k.keyString || k.code || k.license_key || k.license);
+                  } else if (data.key || data.code || data.license_key || data.keyString || data.license || data.result) {
+                    const singleKey = data.key || data.code || data.license_key || data.keyString || data.license || data.result;
+                    if (typeof singleKey === 'string') extracted = [singleKey];
+                  } else if (data.data?.key || data.data?.code || data.data?.license_key || data.data?.keyString || data.data?.license) {
+                    const singleKey = data.data.key || data.data.code || data.data.license_key || data.data.keyString || data.data.license;
+                    if (typeof singleKey === 'string') extracted = [singleKey];
                   } else if (Array.isArray(data)) {
-                    extracted = data.map((k: any) => typeof k === 'string' ? k : k.key || k.code);
+                    extracted = data.map((k: any) => typeof k === 'string' ? k : k.key || k.code || k.license_key || k.license);
                   }
 
                   extracted = extracted.filter(k => Boolean(k) && typeof k === 'string');
@@ -1293,9 +1315,12 @@ export const useStore = create<AdminState>()(
                   if (extracted.length > 0) {
                     pulledKeyStrings = extracted;
                     break;
-                  } else if (data.message || data.error) {
-                    apiErrorMessage = data.message || data.error;
+                  } else if (data.message || data.error || data.msg || data.detail) {
+                    apiErrorMessage = data.message || data.error || data.msg || data.detail;
                   }
+                } else if (extracted.length > 0) {
+                  pulledKeyStrings = extracted;
+                  break;
                 }
               } catch (err: any) {
                 console.warn("API pull attempt error:", err);
